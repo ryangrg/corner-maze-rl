@@ -259,14 +259,15 @@ class CornerMazeEnv(MiniGridEnv):
         cues = ['n', 'e', 's', 'w']
         goals = ['ne', 'se', 'sw', 'nw']
 
-        # Dynamically build layouts
+        # Dynamically build layout variables for all trial configurations
+        # This follows maze layouts as defined in the 2S2C behavioural task
+        # variable naming: layout_trl_{start_arm}_{cue}_{goal}
         base_trl_layouts = {
             'n' : [2, 1,0,1, 0,0,0, 1,0,1, 0,0,0, 0,0,1,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,0],
             'e' : [2, 0,0,0, 1,0,1, 0,0,0, 1,0,1, 0,0,0,1, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,0],
             's' : [2, 1,0,1, 0,0,0, 1,0,1, 0,0,0, 1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,0],
             'w' : [2, 0,0,0, 1,0,1, 0,0,0, 1,0,1, 0,1,0,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,0]
         }
-
         for start_arm in start_arms:
             for cue in cues:
                 for goal in goals:
@@ -1504,7 +1505,7 @@ def main():
     # run_mode 5: RL model with single trial (train)
     # run_mode 6: Run trained RL moeld in inference mode
     # run_mode 7: Run trained RL model and continue training
-    mode = 4
+    mode = 2
     # Define the MiniGrid action legend
     action_legend = {
         0: "L",
