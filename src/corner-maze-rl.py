@@ -79,13 +79,14 @@ else:
     print("MPS is not available. Using CPU instead.")
 
 # REGION ######################### BEGIN ENVIRONMENT CODE ###############################
-# Here se define the enviroment modled after the real world corner maze task
+# Here se define the environment model after the real world corner maze task
 # The environment is a corner maze with a set of walls, cues, rewards, and triggers.
 # The agent can navigate through the maze, and learn to achieve specific goals based on cues and rewards.
-# This a dynamic envirometnment where the layout can change based on the phaese of the session.
-# In regards to the enviroment, session and trial are used in the context of behavioral neurosceince experiments.
+# This a dynamic environment where the layout can change based on the phase of the session.
+# In regards to the environment, session and trial are used in the context of behavioral neuroscience experiments.
 # A session is a series of trials, and a trial is a single instance of the task.
 # Extend colors for customs objects
+
 COLORS["cue_on_rgb"] = np.array([255, 0, 255])
 COLORS["cue_off_rgb"] = np.array([25, 0, 255])
 COLORS["chasm_rgb"] = np.array([0, 0, 255])
@@ -187,7 +188,7 @@ class CornerMazeEnv(MiniGridEnv):
         if max_steps is None:
             max_steps = 4 * size**2
 
-        # Set added intialization variables
+        # Set added initialization variables
         self.session_type = session_type
         self.agent_cue_goal_orientation = agent_cue_goal_orientation
         self.start_goal_location = start_goal_location
@@ -245,7 +246,7 @@ class CornerMazeEnv(MiniGridEnv):
         self.layouts = {}
 
         # Initial layout configuration, no barriers, no cues, no rewards, no triggers
-        # Layout dynamic naming: layout_trl_{start_arm}_{cue}_{goal}
+        # Layout dynamic naming: layout_phase_{start_arm}_{cue}_{goal}
         self.layouts['layout_x_x_xx'] = [0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,0]
         
         # exposure configurations
@@ -254,13 +255,13 @@ class CornerMazeEnv(MiniGridEnv):
         self.layouts['layout_exp_x_x_sw'] = [1, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,0]
         self.layouts['layout_exp_x_x_nw'] = [1, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,1, 0,0, 0,0, 0,0, 0,0, 0,0,0,0]
 
-        # Define dimensions for startarm, cue, and goal
+        # Define dimensions for start arm, cue, and goal
         start_arms = ['n', 'e', 's', 'w']
         cues = ['n', 'e', 's', 'w']
         goals = ['ne', 'se', 'sw', 'nw']
 
         # Dynamically build layout variables for all trial configurations
-        # This follows maze layouts as defined in the 2S2C behavioural task
+        # This follows maze layouts as defined in the 2S2C behavioral task
         # variable naming: layout_trl_{start_arm}_{cue}_{goal}
         base_trl_layouts = {
             'n' : [2, 1,0,1, 0,0,0, 1,0,1, 0,0,0, 0,0,1,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,0],
@@ -285,6 +286,10 @@ class CornerMazeEnv(MiniGridEnv):
                     self.layouts[variable_name] = layout
 
         # ITI Configurations: location of start arm is stated after iti
+        # the meaning of the goal location is different here it indicates the type of ITI
+        # such that the maze is configured to lead to the next start arm location while including that well location.
+        # when the goal is xx it means two wells are present to enter but the rat must go to the farside of the maze to get to the
+        # start arm. In all ITI configurations the weel is in the empty state.
         self.layouts['layout_iti_n_x_xx'] = [3, 0,0,0, 0,1,0, 0,1,0, 0,1,0, 1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0, 2,0, 0,0, 0,1, 0,0,0,0]
         self.layouts['layout_iti_n_x_nw'] = [3, 0,0,1, 0,1,0, 0,1,0, 1,1,0, 1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 3,0,0,0]
         self.layouts['layout_iti_n_x_ne'] = [3, 1,0,0, 0,1,1, 0,1,0, 0,1,0, 1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 3,0,0,0]
@@ -354,8 +359,7 @@ class CornerMazeEnv(MiniGridEnv):
             self.wall_ledge_mask[cell[0], cell[1], :] = False
         self.wall_ledge_mask = self.expand_matrix(self.wall_ledge_mask, VIEW_TILE_SIZE)
         
-        # Intialize action space 
-        # TODO: masking will need to be handle here in some way
+        # Initialize action space 
         # only use forward, left, right, and pickup: pickup is modify to be a well entering action
         self.action_space = spaces.Discrete(4)
         
@@ -364,7 +368,7 @@ class CornerMazeEnv(MiniGridEnv):
         self.last_pose  = [None, None, None]
         self.key_actions = 0
         self.trajectory = []
-        self.trajecteries = []
+        self.trajectories = []
         self.grid_configuration_len = None
         
         # scoring and session trial variables
@@ -381,8 +385,8 @@ class CornerMazeEnv(MiniGridEnv):
         self.phase_punishment_scr = None #subtracts from reward if in phase too long
         self.episode_terminated = None
         self.episode_truncated = None
-        self.in_place_punshiment_scr = 0
-        self.in_loc_count = 0 #if the same arm for more than 9 moves give penelty
+        self.in_place_punishment_scr = 0
+        self.in_loc_count = 0 #if the same arm for more than 9 moves give penalty
         self.session_phase = None # 0: trial, 1: iti_proximal, 2: iti_distal
 
         # Dataframe stuff
@@ -398,10 +402,58 @@ class CornerMazeEnv(MiniGridEnv):
         self.cur_cell = None
 
         # Temp single trial session variables
-        self.pseudo_session_score = deque(maxlen=AQCUISITION_SESSION_TRIALS)
-        [self.pseudo_session_score.append(0) for _ in range(AQCUISITION_SESSION_TRIALS)]
+        self.pseudo_session_score = deque(maxlen=ACQUISITION_SESSION_TRIALS)
+        [self.pseudo_session_score.append(0) for _ in range(ACQUISITION_SESSION_TRIALS)]
 
     def expand_matrix(self, original_matrix, scale_factor):
+        """
+        Expand a low-resolution matrix into a higher-resolution matrix by repeating
+        each element into a (scale_factor x scale_factor) block.
+
+        Parameters
+        - original_matrix: np.ndarray
+            A 2D boolean/numeric matrix with shape (H, W) or a 3D matrix with shape
+            (H, W, C) where C is the number of channels (e.g., 2 for masks or 3 for RGB).
+        - scale_factor: int
+            The integer factor by which to scale each matrix axis. Each element at
+            position (i, j) in the original matrix will expand to the block
+            [i*scale_factor:(i+1)*scale_factor, j*scale_factor:(j+1)*scale_factor]
+            in the returned matrix.
+
+        Returns
+        - expanded_matrix: np.ndarray
+            A new array with shape (H*scale_factor, W*scale_factor) for 2D inputs or
+            (H*scale_factor, W*scale_factor, C) for 3D inputs. The dtype of the
+            returned array matches the dtype of `original_matrix`.
+
+                Notes
+                - This implementation uses explicit Python loops for clarity and to match
+                    the original behaviour. For large matrices or performance-critical
+                    paths, consider using `np.kron(original_matrix, np.ones((scale_factor, scale_factor)))`
+                    which performs the same expansion much faster using vectorized operations.
+
+                Effect on observations
+                - The primary use of this function in the environment is to convert
+                    low-resolution, cell-aligned masks (shape: AGENT_VIEW_SIZE x AGENT_VIEW_SIZE
+                    or AGENT_VIEW_SIZE x AGENT_VIEW_SIZE x C) into pixel-aligned masks that
+                    match the image returned by `grid.render(tile_size=VIEW_TILE_SIZE)`.
+                - Typical masks in `init_variables()`:
+                        - `self.visual_mask` (2D boolean): which grid cells the agent can see.
+                            After expansion, this is applied to the red channel of the rendered
+                            observation to zero-out cue pixels outside the agent's visual field.
+                        - `self.wall_ledge_mask` (3D boolean with C==2): per-cell inclusion for
+                            two separate channel masks. After expansion, the two channels are
+                            applied to the green and blue channels of the rendered image to
+                            selectively hide/show walls and ledges.
+                - After expansion, the expected spatial shape is
+                    `(AGENT_VIEW_SIZE * VIEW_TILE_SIZE, AGENT_VIEW_SIZE * VIEW_TILE_SIZE)`
+                    (or with channels for 3D masks). It's good practice to assert this
+                    when debugging:
+                        `assert expanded.shape[:2] == (AGENT_VIEW_SIZE * VIEW_TILE_SIZE,
+                                                                                         AGENT_VIEW_SIZE * VIEW_TILE_SIZE)`
+                - Dtype is preserved: boolean masks remain boolean (used for indexing)
+                    and numeric masks keep their dtype (useful for arithmetic operations).
+        """
         original_shape = original_matrix.shape
         original_height, original_width = original_shape[:2]
         new_height = original_height * scale_factor
@@ -1029,9 +1081,9 @@ class CornerMazeEnv(MiniGridEnv):
         #     self.in_loc_count = 0
 
         # if self.in_loc_count >= 2:
-        #     self.in_place_punshiment_scr += 1
+        #     self.in_place_punishment_scr += 1
         # else:
-        #     self.in_place_punshiment_scr = 0
+        #     self.in_place_punishment_scr = 0
         
         # Get the cell type the agent is on
         self.cur_cell = type(self.grid.get(*self.agent_pos)).__name__
@@ -1212,7 +1264,7 @@ class CornerMazeEnv(MiniGridEnv):
 
 
         # Add in in-place punishment score
-        # reward -= 0.05 * self.in_place_punshiment_scr
+        # reward -= 0.05 * self.in_place_punishment_scr
 
         # Track session cumulative reward
         self.session_reward += reward
@@ -1500,11 +1552,11 @@ def main():
     # run_mode 0: manual control testing with single trial and pov plot
     # run_mode 1: manual control with single trial and view of agent
     # run_mode 2: manual control testing with full session (enter session_type you want to use)
-    # run_mode 3: RL model with single trial (test)
-    # run_mode 4: RL model with full session (enter session_type you want to train on)
-    # run_mode 5: RL model with single trial (train)
+    # run_mode 3: PPO RL model with single trial (train)
+    # run_mode 4: maskablePPO RL model with full session (enter session_type you want to train on)
+    # run_mode 5: A2C RL model with single trial (train)
     # run_mode 6: Run trained RL moeld in inference mode
-    # run_mode 7: Run trained RL model and continue training
+    # run_mode 7: Run trained RL model on novel route and continue training
     mode = 2
     # Define the MiniGrid action legend
     action_legend = {
@@ -1722,5 +1774,6 @@ def main():
                                      env=env)
             # Train the model with the custom callback
             model.learn(total_timesteps=10e6)
+
 if __name__ == "__main__":
     main()
