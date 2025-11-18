@@ -239,7 +239,7 @@ class CornerMazeEnv(MiniGridEnv):
         agent interacts with the maze according to the specified configurations.
         """
         # state_type: 0 = base, 1 = exposure, 2 = trial, 3 = iti, maze_state_array: 1-16 = barriers, 17-20 = cues, 21-24 = wells, 
-        # 25-36 = trigger zones. refference spread sheet for more details
+        # 25-36 = trigger zones. reference spread sheet for more details
         self.maze_state_array = [0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,0]
         
         # Dictionary to store trl layouts
@@ -428,7 +428,7 @@ class CornerMazeEnv(MiniGridEnv):
 
                 Notes
                 - This implementation uses explicit Python loops for clarity and to match
-                    the original behaviour. For large matrices or performance-critical
+                    the original behavior. For large matrices or performance-critical
                     paths, consider using `np.kron(original_matrix, np.ones((scale_factor, scale_factor)))`
                     which performs the same expansion much faster using vectorized operations.
 
@@ -609,53 +609,17 @@ class CornerMazeEnv(MiniGridEnv):
     # generates the sequence of grid configurations for the session
     def gen_grid_configuration_sequence(self):
         # Set goal location index to generate episode sequence
-        if self.agent_cue_goal_orientation == 'N/NE':
-            if self.start_goal_location == 'NE':
-                goal_location_index = 0
-            elif self.start_goal_location == 'SE':
-                goal_location_index = 1
-            elif self.start_goal_location == 'SW':
-                goal_location_index = 2
-            elif self.start_goal_location == 'NW':
-                goal_location_index = 3
-            else:
-                goal_location_index = None
-        elif self.agent_cue_goal_orientation == 'N/SE':
-            if self.start_goal_location == 'NE':
-                goal_location_index = 3
-            elif self.start_goal_location == 'SE':
-                goal_location_index = 0
-            elif self.start_goal_location == 'SW':
-                goal_location_index = 1
-            elif self.start_goal_location == 'NW':
-                goal_location_index = 2
-            else:
-                goal_location_index = None
-        elif self.agent_cue_goal_orientation == 'N/SW':
-            if self.start_goal_location == 'NE':
-                goal_location_index = 2
-            elif self.start_goal_location == 'SE':
-                goal_location_index = 3
-            elif self.start_goal_location == 'SW':
-                goal_location_index = 0
-            elif self.start_goal_location == 'NW':
-                goal_location_index = 1
-            else:
-                goal_location_index = None
-        elif self.agent_cue_goal_orientation == 'N/NW':
-            if self.start_goal_location == 'NE':
-                goal_location_index = 1
-            elif self.start_goal_location == 'SE':
-                goal_location_index = 2
-            elif self.start_goal_location == 'SW':
-                goal_location_index = 3
-            elif self.start_goal_location == 'NW':
-                goal_location_index = 0
-            else:
-                goal_location_index = None
+        if self.start_goal_location == 'NE':
+            goal_location_index = 0
+        elif self.start_goal_location == 'SE':
+            goal_location_index = 1
+        elif self.start_goal_location == 'SW':
+            goal_location_index = 2
+        elif self.start_goal_location == 'NW':
+            goal_location_index = 3
         else:
             goal_location_index = None
-
+       
         # returns list start goal pairs (start arm, goal)
         def init_fixed_cue_single_trial():
             # Cue is always in the north postion for this session type and goal is adjusted based
@@ -676,19 +640,20 @@ class CornerMazeEnv(MiniGridEnv):
             index_size = list_size*8
             # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
             # LL:0, RR:1, RL:2, LR:3
-            # (start arm, cue, route, goal location index) 
+            # (start arm, cue, route, goal location index)
+            # print 
             if self.agent_cue_goal_orientation == 'N/NE':
                 sgc_list = [((goal_location_index + 1) % 4, goal_location_index, 1, goal_location_index), 
-                                 ((goal_location_index - 1) % 4, goal_location_index, 3, goal_location_index)]
+                            ((goal_location_index - 1) % 4, goal_location_index, 3, goal_location_index)]
             elif self.agent_cue_goal_orientation == 'N/SE':
-                sgc_list = [(goal_location_index, goal_location_index, 0, goal_location_index), 
-                                 ((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index)]
+                sgc_list = [(goal_location_index, (goal_location_index - 1) % 4, 0, goal_location_index), 
+                            ((goal_location_index + 2) % 4, (goal_location_index - 1) % 4, 2, goal_location_index)]
             elif self.agent_cue_goal_orientation == 'N/SW':
-                sgc_list = [((goal_location_index - 1) % 4, goal_location_index, 3, goal_location_index), 
-                                 ((goal_location_index + 1) % 4, goal_location_index, 1, goal_location_index)]
+                sgc_list = [((goal_location_index - 1) % 4, (goal_location_index - 2) % 4, 3, goal_location_index), 
+                            ((goal_location_index + 1) % 4, (goal_location_index - 2) % 4, 1, goal_location_index)]
             elif self.agent_cue_goal_orientation == 'N/NW':
-                sgc_list = [((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index), 
-                                 (goal_location_index, goal_location_index, 0, goal_location_index)]
+                sgc_list = [((goal_location_index + 2) % 4, (goal_location_index + 1) % 4, 2, goal_location_index), 
+                            (goal_location_index, (goal_location_index + 1) % 4, 0, goal_location_index)]
             sg_pairs_temp = sgc_list * 4
 
             start_repeat_limit = 2
@@ -741,7 +706,7 @@ class CornerMazeEnv(MiniGridEnv):
                     continue
             return [(m,n,p) for m, n, o, p in sgc_list]
 
-        def generate_sg_fixed_cue_2a(list_size):
+        def init_fixed_cue_novel_route(list_size):
             index_size = 16 + (list_size - 1) * 6
 
             # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
@@ -751,15 +716,15 @@ class CornerMazeEnv(MiniGridEnv):
                 sgc_list = [((goal_location_index + 1) % 4, goal_location_index, 1, goal_location_index), 
                             ((goal_location_index - 1) % 4, goal_location_index, 3, goal_location_index)]
             elif self.agent_cue_goal_orientation == 'N/SE':
-                sgc_list = [(goal_location_index, goal_location_index, 0, goal_location_index), 
-                                 ((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index)]
+                sgc_list = [(goal_location_index, (goal_location_index - 1) % 4, 0, goal_location_index), 
+                            ((goal_location_index + 2) % 4, (goal_location_index - 1) % 4, 2, goal_location_index)]
             elif self.agent_cue_goal_orientation == 'N/SW':
-                sgc_list = [((goal_location_index - 1) % 4, goal_location_index, 3, goal_location_index), 
-                                 ((goal_location_index + 1) % 4, goal_location_index, 1, goal_location_index)]
+                sgc_list = [((goal_location_index - 1) % 4, (goal_location_index - 2) % 4, 3, goal_location_index), 
+                            ((goal_location_index + 1) % 4, (goal_location_index - 2) % 4, 1, goal_location_index)]
             elif self.agent_cue_goal_orientation == 'N/NW':
-                sgc_list = [((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index), 
-                                 (goal_location_index, goal_location_index, 0, goal_location_index)]
-            sg_pairs_trained = sgc_list * 8
+                sgc_list = [((goal_location_index + 2) % 4, (goal_location_index + 1) % 4, 2, goal_location_index), 
+                            (goal_location_index, (goal_location_index + 1) % 4, 0, goal_location_index)]
+            sg_pairs_trained = sgc_list #* 8
 
             
             sg_pairs_list = []
@@ -767,24 +732,33 @@ class CornerMazeEnv(MiniGridEnv):
             # LL:0, RR:1, RL:2, LR:3 
             # (start arm, cue, route, goal location index) 
             if self.agent_cue_goal_orientation == 'N/NE':
-                sg_pairs_list = [((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index),
-                                 ((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index),
-                                 ((goal_location_index + 1) % 4, goal_location_index, 1, goal_location_index), 
+                sg_pairs_list = [((goal_location_index + 1) % 4, goal_location_index, 1, goal_location_index), 
                                  ((goal_location_index - 1) % 4, goal_location_index, 3, goal_location_index),
-                                 ((goal_location_index + 1) % 4, goal_location_index, 1, goal_location_index), 
-                                 ((goal_location_index - 1) % 4, goal_location_index, 3, goal_location_index)]
+                                 ((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index), 
+                                 ((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index),
+                                 ((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index), 
+                                 ((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index)]
             elif self.agent_cue_goal_orientation == 'N/SE':
-                sg_pairs_list = [(goal_location_index, goal_location_index, 0), ((goal_location_index + 2) % 4, goal_location_index, 2),
-                                 ((goal_location_index + 1) % 4, goal_location_index, 1), ((goal_location_index + 1) % 4, goal_location_index, 1),
-                                 ((goal_location_index + 1) % 4, goal_location_index, 1), ((goal_location_index + 1) % 4, goal_location_index, 1)]
+                sg_pairs_list = [(goal_location_index, (goal_location_index - 1) % 4, 0, goal_location_index), 
+                                 ((goal_location_index + 2) % 4, (goal_location_index - 1) % 4, 2, goal_location_index),
+                                 ((goal_location_index + 1) % 4, (goal_location_index - 1) % 4, 1, goal_location_index), 
+                                 ((goal_location_index + 1) % 4, (goal_location_index - 1) % 4, 1, goal_location_index),
+                                 ((goal_location_index + 1) % 4, (goal_location_index - 1) % 4, 1, goal_location_index), 
+                                 ((goal_location_index + 1) % 4, (goal_location_index - 1) % 4, 1, goal_location_index)]
             elif self.agent_cue_goal_orientation == 'N/SW':
-                sg_pairs_list = [((goal_location_index - 1) % 4, goal_location_index, 3), ((goal_location_index + 1) % 4, goal_location_index, 1),
-                                 (goal_location_index, goal_location_index, 0), (goal_location_index, goal_location_index, 0),
-                                 (goal_location_index, goal_location_index, 0), (goal_location_index, goal_location_index, 0)]
+                sg_pairs_list = [((goal_location_index - 1) % 4, (goal_location_index - 2) % 4, 3, goal_location_index), 
+                                 ((goal_location_index + 1) % 4, (goal_location_index - 2) % 4, 1, goal_location_index),
+                                 (goal_location_index, (goal_location_index - 2) % 4, 0, goal_location_index), 
+                                 (goal_location_index, (goal_location_index - 2) % 4, 0, goal_location_index),
+                                 (goal_location_index, (goal_location_index - 2) % 4, 0, goal_location_index), 
+                                 (goal_location_index, (goal_location_index - 2) % 4, 0, goal_location_index)]
             elif self.agent_cue_goal_orientation == 'N/NW':
-                sg_pairs_list = [((goal_location_index + 2) % 4, goal_location_index, 2), (goal_location_index, goal_location_index, 0),
-                                 ((goal_location_index - 1) % 4, goal_location_index, 3), ((goal_location_index - 1) % 4, goal_location_index, 3),
-                                 ((goal_location_index - 1) % 4, goal_location_index, 3), ((goal_location_index - 1) % 4, goal_location_index, 3)]
+                sg_pairs_list = [((goal_location_index + 2) % 4, (goal_location_index + 1) % 4, 2, goal_location_index), 
+                                 (goal_location_index, (goal_location_index + 1) % 4, 0, goal_location_index),
+                                 ((goal_location_index - 1) % 4, (goal_location_index + 1) % 4, 3, goal_location_index), 
+                                 ((goal_location_index - 1) % 4, (goal_location_index + 1) % 4, 3, goal_location_index),
+                                 ((goal_location_index - 1) % 4, (goal_location_index + 1) % 4, 3, goal_location_index), 
+                                 ((goal_location_index - 1) % 4, (goal_location_index + 1) % 4, 3, goal_location_index)]
             sg_pairs_test = sg_pairs_list
 
             start_threepeat_limit = 0
@@ -839,10 +813,10 @@ class CornerMazeEnv(MiniGridEnv):
             start_goal_cue_list = init_fixed_cue_single_trial()
         elif self.session_type == 'fixed cue acquisition':
             start_goal_cue_list = init_fixed_cue_acq(4)
-        elif self.session_type == 'fixed cue detour':
-            start_goal_cue_list = generate_sg_fixed_cue_2a(4)
+        elif self.session_type == 'fixed cue novel route':
+            start_goal_cue_list = init_fixed_cue_novel_route(4)
 
-        print(len(start_goal_cue_list))
+        #print(len(start_goal_cue_list))
         grid_configuration_sequence = []
         len_sgc = len(start_goal_cue_list)
         for i, sgc in enumerate(start_goal_cue_list):
@@ -863,7 +837,8 @@ class CornerMazeEnv(MiniGridEnv):
 
     def gen_start_pose(self):
         # returns a tuple of the agents starting position and direction
-
+        # check where the start arm is and align the agent so it's pose
+        # is facing the center of the maze.
         if self.grid_configuration_sequence[0][13] == 1:
             return (6, 8), 3 # South start arm
         elif self.grid_configuration_sequence[0][14] == 1:
@@ -1025,16 +1000,16 @@ class CornerMazeEnv(MiniGridEnv):
             #     # reward += TURN_INTR_SCR
             # else:
             #     reward += TURN_SCR       
-        # Rotate right
         elif action == Actions.right:
+            # Rotate right
             self.agent_dir = (self.agent_dir + 1) % 4
             # if self.agent_pos in INTERSECTIONS:
             #     reward += TURN_INTR_SCR
             # else:
             #     reward += TURN_SCR
             reward += TURN_SCR
-        # Move forward
         elif action == Actions.forward:
+            # Move forward
             if self.agent_pose in WELL_EXIT_POSES:
                 # These conditions control well exit behavior
                 if self.agent_pos == (1,1):
@@ -1054,9 +1029,9 @@ class CornerMazeEnv(MiniGridEnv):
                 self.agent_pos = tuple(self.fwd_pos)
                 reward += FORWARD_SCR
             else:
-                reward += INAPPROPRIATE_ACTION_SCR # forward movement where it can't happen represents investigation
-        # Well entry action (pickup)   
+                reward += INAPPROPRIATE_ACTION_SCR # forward movement where it can't happen represents investigation  
         elif action == Actions.pickup:
+            # Well entry action (pickup) 
             if self.agent_pos == (10,2):
                 self.agent_pos = (11,1)
                 self.agent_dir = 0
@@ -1071,8 +1046,7 @@ class CornerMazeEnv(MiniGridEnv):
                 self.agent_dir = 3
             reward += FORWARD_SCR
     
-
-        # Penelize staying in the same position for more that 2 steps
+        # Penalize staying in the same position for more that 2 steps
         # This is to prevent the agent from getting stuck in a loop of moving back and forth
         # in the same position or arm
         # if self.agent_pos == self.last_pose[:2]:
@@ -1131,9 +1105,6 @@ class CornerMazeEnv(MiniGridEnv):
                         self.turn_score[1] = 1
 
         # CELL AND TRIGGER CONDITION CHECKS
-        # This needs to be checked againest line 768 in 'corner-maze-base-0.py' because of how I tracked
-        # the generation the intertrial interval after the reward well is reach and how I gnerated the 
-        # iti configuration.
         if self.cur_cell == 'RewardWell':
             reward += WELL_REWARD_SCR
             self.trial_count += 1
@@ -1151,8 +1122,8 @@ class CornerMazeEnv(MiniGridEnv):
                 self.episode_data = pd.concat([self.episode_data, current_episode_data], ignore_index=True)
                 self.pseudo_session_score.appendleft(self.trial_score)
                 print('Reward: ', self.turn_score, ' ', self.trial_score)
-            # multi trial condition with intertrial interval
             elif self.grid_configuration_len > 1:
+                # multi trial condition with intertrial interval
                 if self.trial_score == None:# Checking if this was the first Well visited then set trial score to 1
                         self.trial_score = 1
                 # Save trial score and turn scores
@@ -1186,38 +1157,52 @@ class CornerMazeEnv(MiniGridEnv):
                     self.sequence_count += 1
                     goal_loc = self.grid_configuration_sequence[self.sequence_count][-1]
                     start_arm_loc = self.grid_configuration_sequence[self.sequence_count+1][-2]
-                    # TODO: This needs to be developed to hadle rotation and other goal posiitons than NE
+
+                    # Reminder on session_phase meaning 0: trial, 1: iti_proximal, 2: iti_distal
+                    # Make maze adjustments for the iti depending if start arm is in a 
+                    # proximal or distal location from the goal.
+                    print(f'start_arm: {start_arm_loc}\ngoal_loc {goal_loc}')
                     if goal_loc == 0:
-                        if start_arm_loc == 2:
+                        if start_arm_loc == 0:
+                            self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][2])
+                            self.session_phase = 1
+                        elif start_arm_loc == 1:
+                            self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][1])
+                            self.session_phase = 1
+                        else:    
                             self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][0])
                             self.session_phase = 2
-                        elif start_arm_loc == 1:
+                    elif goal_loc == 1:
+                        if start_arm_loc == 1:
+                            self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][2])
+                            self.session_phase = 1
+                        elif start_arm_loc == 2:
                             self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][1])
                             self.session_phase = 1
                         else:
                             self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][0])
                             self.session_phase = 2  
-                    elif goal_loc == 1:
-                        if start_arm_loc == 1:
-                            self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][2])
-                        elif start_arm_loc == 2:
-                            self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][1])
-                        else:
-                            self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][0])  
                     elif goal_loc == 2:
                         if start_arm_loc == 2:
                             self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][2])
+                            self.session_phase = 1
                         elif start_arm_loc == 3:
                             self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][1])
+                            self.session_phase = 1
                         else:
-                            self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][0])  
+                            self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][0])
+                            self.session_phase = 2  
                     elif goal_loc == 3: 
-                            if start_arm_loc == 3:
-                                self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][2])
-                            elif start_arm_loc == 0:
-                                self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][1])
-                            else:
-                                self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][0]) 
+                        if start_arm_loc == 3:
+                            self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][2])
+                            self.session_phase = 1
+                        elif start_arm_loc == 0:
+                            self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][1])
+                            self.session_phase = 1
+                        else:
+                            self.update_grid_configuration(self.grid_configuration_sequence[self.sequence_count][0])
+                            self.session_phase = 2
+
         elif self.cur_cell == 'EmptyWell' and self.last_pose[:2] not in WELL_LOCATIONS:
             reward += WELL_EMPTY_SCR
             self.trial_score = 0
@@ -1243,7 +1228,7 @@ class CornerMazeEnv(MiniGridEnv):
         # Get the contents of the cell in front of the agent
         self.fwd_cell = self.grid.get(*self.fwd_pos)
 
-        # Check for too long in segment penalty and give pently if step for phase exceeded
+        # Check for too long in segment penalty and give penalty if step for phase exceeded
         self.phase_step_count += 1
         if self.session_phase == 0 and self.phase_step_count > 13:
             self.phase_punishment_scr += TOO_LONG_IN_PHASE
@@ -1280,7 +1265,7 @@ class CornerMazeEnv(MiniGridEnv):
                                                       'trial_scores': self.trial_score,
                                                       'trajectory': self.trajectory,
                                                       'total_reward': self.session_reward}])
-                self.episdoe_data = pd.concat([self.episode_data, current_episode_data], ignore_index=True)
+                self.episode_data = pd.concat([self.episode_data, current_episode_data], ignore_index=True)
                 self.pseudo_session_score.appendleft(self.trial_score)
                 truncated = True    
             elif self.grid_configuration_len > 1:
@@ -1364,7 +1349,7 @@ class CornerMazeEnv(MiniGridEnv):
         self.grid_configuration_len = len(self.grid_configuration_sequence)
         self.session_num_trials = -(-self.grid_configuration_len // 2) # ceiling division trick to get number of trials
 
-        # Configure maze environment
+        # Configure maze environment to the first setting of grid_configuration_sequence
         self.update_grid_configuration(self.grid_configuration_sequence[0])
 
         # Determine start position from grid config and set agent start position and direction
@@ -1512,8 +1497,6 @@ class CustomMaskablePolicy(MaskableActorCriticPolicy):
         :param action_masks: Action masks to apply to the action distribution
         :return: action, value and log probability of the action
         """
-
-
         # Preprocess the observation if needed
         features = self.extract_features(obs)
         if self.share_features_extractor:
@@ -1552,10 +1535,10 @@ def main():
     # run_mode 0: manual control testing with single trial and pov plot
     # run_mode 1: manual control with single trial and view of agent
     # run_mode 2: manual control testing with full session (enter session_type you want to use)
-    # run_mode 3: PPO RL model with single trial (train)
+    # run_mode 3: PPO RL model with single trial (train) No masking.
     # run_mode 4: maskablePPO RL model with full session (enter session_type you want to train on)
-    # run_mode 5: A2C RL model with single trial (train)
-    # run_mode 6: Run trained RL moeld in inference mode
+    # run_mode 5: A2C RL model with single trial (train) No masking.
+    # run_mode 6: Run trained RL model in inference mode
     # run_mode 7: Run trained RL model on novel route and continue training
     mode = 2
     # Define the MiniGrid action legend
@@ -1591,9 +1574,10 @@ def main():
     elif mode == 2:
         env = CornerMazeEnv(render_mode="human",
                             max_steps=10000,
-                            agent_cue_goal_orientation='N/NE',
-                            start_goal_location = 'NE',
-                            session_type='fixed cue acquisition',
+                            agent_cue_goal_orientation='N/NW',
+                            start_goal_location = 'NW',
+                            # Session_types: 'fixed cue acquisition', 'fixed cue novel route'
+                            session_type='fixed cue novel route',
                             run_mode=mode)
         manual_control = ManualControl(env, seed=42)
         manual_control.start()
@@ -1759,7 +1743,7 @@ def main():
             #env = CornerMazeEnv(render_mode="rgb_array",
                                 max_steps=STEPS,
                                 agent_cue_goal_orientation='N/NE',
-                                start_goal_location = 'NE',
+                                start_goal_location = 'SW',
                                 session_type='fixed cue detour',
                                 run_mode=mode)
             

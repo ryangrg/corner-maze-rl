@@ -36,7 +36,7 @@ TOO_LONG_SCR = 55
 TOO_LONG_IN_PHASE = -0.001
 
 # Session scoring variables to track progress of agent
-AQCUISITION_SESSION_TRIALS = 64
+ACQUISITION_SESSION_TRIALS = 32
 
 # View variables 
 AGENT_VIEW_SIZE = 21
