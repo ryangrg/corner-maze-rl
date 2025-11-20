@@ -639,9 +639,7 @@ class CornerMazeEnv(MiniGridEnv):
             return sgc_list
 
         def gen_pi_vc_f2_acq():
-            print('been here')
             # Acquisition session are a total of 32 trials and shuffled in chunks of 16 trials
-            index_size = 32
             chunk_size = 4
             # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
             # LL:0, RR:1, RL:2, LR:3
@@ -711,7 +709,7 @@ class CornerMazeEnv(MiniGridEnv):
                     passed = False
                     continue
             
-            print(f'Length List: {sgc_list}')
+            #print(f'Length List: {len(sgc_list)}')
             return [(m,n,p) for m, n, o, p in sgc_list]
 
         def gen_pi_vc_f2_novel_route():
@@ -719,8 +717,7 @@ class CornerMazeEnv(MiniGridEnv):
             # trials followed by a mix of 16 novel route trials interleaved with 8 acquisition
             # trials (4 and 4 from each arm). index_size is the total trials and chunks is the
             # number mini list to shuffle
-            index_size = 40
-            chunk_size = 5
+            chunk_size = 6
             # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
             # LL:0, RR:1, RL:2, LR:3
             # (start arm, cue, route, goal location index) 
@@ -736,8 +733,8 @@ class CornerMazeEnv(MiniGridEnv):
             elif self.agent_cue_goal_orientation == 'N/NW':
                 sgc_list = [((goal_location_index + 2) % 4, (goal_location_index + 1) % 4, 2, goal_location_index), 
                             (goal_location_index, (goal_location_index + 1) % 4, 0, goal_location_index)]
-            sg_pairs_trained = sgc_list * 4
-
+            sgc_trained = sgc_list * 4
+            
             sg_pairs_list = []
             # Adding novel route from start arm facing cue
             # LL:0, RR:1, RL:2, LR:3 
@@ -784,10 +781,10 @@ class CornerMazeEnv(MiniGridEnv):
                 passed = True
                 sg_pairs.clear()
                 for i in range(chunk_size):
-                    if i < 1:
-                        random.shuffle(sg_pairs_trained)
-                        sg_pairs += sg_pairs_trained.copy()
-                    elif i == 1:
+                    if i <= 1:
+                        random.shuffle(sgc_trained)
+                        sg_pairs += sgc_trained.copy()
+                    elif i == 2:
                         # Make sure after end of acquisition trial the next trial is a probe
                         sg_pairs_test.remove(temp_item)
                         random.shuffle(sg_pairs_test)
@@ -800,14 +797,14 @@ class CornerMazeEnv(MiniGridEnv):
                             continue
                         else:
                             sg_pairs += sg_pairs_test.copy()
-
+                len_sg_pairs = len(sg_pairs)
                 for i, sgp in enumerate(sg_pairs[0:-3]):
                     if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0] and sgp[0] == sg_pairs[i + 3][0]:
                         start_fourpeat += 1
                     if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
-                    if i == index_size - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
+                    if i == len_sg_pairs - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
                 # Catch four repeats or over threepeat limit
@@ -818,12 +815,12 @@ class CornerMazeEnv(MiniGridEnv):
                     fails += 1
                     passed = False
                     continue
-
+            
+            #print(f'Length Total: {len(sg_pairs)}\nLength Train: {len(sgc_trained)}\nLength Probe: {len(sg_pairs_test)}\nChunk Size: {chunk_size}')
             return [(m,n,p) for m, n, o, p in sg_pairs]
         
         def gen_pi_vc_f2_no_cue():
             # No cue probe session PI+VC acquisition subjects 
-            index_size = 32
             chunk_size = 4
             # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
             # LL:0, RR:1, RL:2, LR:3
@@ -857,13 +854,14 @@ class CornerMazeEnv(MiniGridEnv):
                     random.shuffle(sg_pairs_temp)
                     sgc_list += sg_pairs_temp.copy()
                 
+                len_sgc_list = len(sgc_list)
                 for i, sgp in enumerate(sgc_list[0:-3]):
                     if sgp[0] == sgc_list[i + 1][0] and sgp[0] == sgc_list[i + 2][0] and sgp[0] == sgc_list[i + 3][0]:
                         start_fourpeat += 1
                     if sgp[0] == sgc_list[i + 1][0] and sgp[0] == sgc_list[i + 2][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
-                    if i == index_size - 4 and sgc_list[i + 1][0] == sgc_list[i + 2][0] and sgc_list[i + 1][0] == \
+                    if i == len_sgc_list - 4 and sgc_list[i + 1][0] == sgc_list[i + 2][0] and sgc_list[i + 1][0] == \
                             sgc_list[i + 3][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
@@ -892,6 +890,8 @@ class CornerMazeEnv(MiniGridEnv):
                     fails += 1
                     passed = False
                     continue
+            
+            #print(f'Length Total: {len(sgc_list)}\nChunk Size: {chunk_size}')
             return [(m,n,p) for m, n, o, p in sgc_list]
 
         def gen_pi_vc_f2_rotate():
@@ -1064,15 +1064,14 @@ class CornerMazeEnv(MiniGridEnv):
                     passed = False
                     continue
             
-            print(f"fails: {fails} len: {len(sg_pairs)}")       
-            return [(m,n,p) for m, n, o, p in sgc_list]
+            #print(f"list size: {len(sg_pairs)}")   
+            return [(m,n,p) for m, n, o, p in sg_pairs]
         
         def gen_pi_vc_f2_reversal():
             # The reversal probe has a total of 80 trials with the first 16 trials being acquisition
             # trials and the subsequent 64 trials being reversals. Each post acquisition trial chunk
             # is size 8.
-            index_size = 80
-            chunk_size = 9
+            chunk_size = 10
 
             # direct route to goal is added for easy checking of repeated routes and then removed  
             # when done creating list
@@ -1090,7 +1089,7 @@ class CornerMazeEnv(MiniGridEnv):
             elif self.agent_cue_goal_orientation == 'N/NW':
                 sgc_list = [((goal_location_index + 2) % 4, (goal_location_index + 1) % 4, 2, goal_location_index), 
                             (goal_location_index, (goal_location_index + 1) % 4, 0, goal_location_index)]
-            sg_pairs_trained = sgc_list * 8
+            sgc_trained = sgc_list * 4
 
             sg_pairs_list = []
             # Adding novel route from start arm facing cue
@@ -1122,20 +1121,20 @@ class CornerMazeEnv(MiniGridEnv):
                 sg_pairs.clear()
                 # Shuffle lists in separate batches, of acquisition and probe portions
                 for i in range(chunk_size):
-                    if i < 1:
-                        random.shuffle(sg_pairs_trained)
-                        sg_pairs += sg_pairs_trained.copy()
+                    if i <= 1:
+                        random.shuffle(sgc_trained)
+                        sg_pairs += sgc_trained.copy()
                     else:
                         random.shuffle(sg_pairs_test)
                         sg_pairs += sg_pairs_test.copy()
-
+                len_sg_pairs = len(sg_pairs)
                 for i, sgp in enumerate(sg_pairs[0:-3]):
                     if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0] and sgp[0] == sg_pairs[i + 3][0]:
                         start_fourpeat += 1
                     if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
-                    if i == index_size - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
+                    if i == len_sg_pairs - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
                 # Catch four repeats or over threepeat limit
@@ -1146,12 +1145,12 @@ class CornerMazeEnv(MiniGridEnv):
                     fails += 1
                     passed = False
                     continue
-
+            
+            #print(f'Length Total: {len(sg_pairs)}\nLength Train: {len(sgc_trained)}\nLength Probe: {len(sg_pairs_test)}\nChunk Size: {chunk_size}')
             return [(m,n,p) for m, n, o, p in sg_pairs]
 
         def gen_pi_vc_f1_acq():
             # Acquisition session are a total of 32 trials and shuffled in chunks of 16 trials
-            index_size = 32
             chunk_size = 4
             # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
             # LL:0, RR:1, RL:2, LR:3
@@ -1184,14 +1183,14 @@ class CornerMazeEnv(MiniGridEnv):
                 for _ in range(chunk_size):
                     random.shuffle(sg_pairs_temp)
                     sgc_list += sg_pairs_temp.copy()
-                
+                len_sgc_list = len(sgc_list)
                 for i, sgp in enumerate(sgc_list[0:-3]):
                     if sgp[0] == sgc_list[i + 1][0] and sgp[0] == sgc_list[i + 2][0] and sgp[0] == sgc_list[i + 3][0]:
                         start_fourpeat += 1
                     if sgp[0] == sgc_list[i + 1][0] and sgp[0] == sgc_list[i + 2][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
-                    if i == index_size - 4 and sgc_list[i + 1][0] == sgc_list[i + 2][0] and sgc_list[i + 1][0] == \
+                    if i == len_sgc_list - 4 and sgc_list[i + 1][0] == sgc_list[i + 2][0] and sgc_list[i + 1][0] == \
                             sgc_list[i + 3][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
@@ -1220,6 +1219,8 @@ class CornerMazeEnv(MiniGridEnv):
                     fails += 1
                     passed = False
                     continue
+            
+            #print(f'Length List: {len(sgc_list)}')
             return [(m,n,p) for m, n, o, p in sgc_list]
 
         def gen_pi_vc_f1_novel_route():
@@ -1229,8 +1230,7 @@ class CornerMazeEnv(MiniGridEnv):
             # trials followed by a mix of 16 novel route trials interleaved with 8 acquisition
             # trials (4 and 4 from each arm). index_size is the total trials and chunks is the
             # number mini list to shuffle
-            index_size = 40
-            chunk_size = 5
+            chunk_size = 6
             # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
             # LL:0, RR:1, RL:2, LR:3
             # (start arm, cue, route, goal location index) 
@@ -1246,7 +1246,7 @@ class CornerMazeEnv(MiniGridEnv):
             elif self.agent_cue_goal_orientation == 'N/NW':
                 sgc_list = [((goal_location_index-1)%4, (goal_location_index+1)%4, 3, goal_location_index), 
                             (goal_location_index, (goal_location_index+1)%4, 0, goal_location_index)]
-            sg_pairs_trained = sgc_list * 8
+            sgc_trained = sgc_list * 4
 
             sg_pairs_list = []
             # Adding novel route from start arm facing cue
@@ -1294,10 +1294,10 @@ class CornerMazeEnv(MiniGridEnv):
                 passed = True
                 sg_pairs.clear()
                 for i in range(chunk_size):
-                    if i < 1:
-                        random.shuffle(sg_pairs_trained)
-                        sg_pairs += sg_pairs_trained.copy()
-                    elif i == 1:
+                    if i <= 1:
+                        random.shuffle(sgc_trained)
+                        sg_pairs += sgc_trained.copy()
+                    elif i == 2:
                         # Make sure after end of acquisition trial the next trial is a probe
                         sg_pairs_test.remove(temp_item)
                         random.shuffle(sg_pairs_test)
@@ -1310,14 +1310,15 @@ class CornerMazeEnv(MiniGridEnv):
                             continue
                         else:
                             sg_pairs += sg_pairs_test.copy()
-
+                
+                len_sg_pairs = len(sg_pairs)
                 for i, sgp in enumerate(sg_pairs[0:-3]):
                     if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0] and sgp[0] == sg_pairs[i + 3][0]:
                         start_fourpeat += 1
                     if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
-                    if i == index_size - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
+                    if i == len_sg_pairs - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
                 # Catch four repeats or over threepeat limit
@@ -1328,11 +1329,11 @@ class CornerMazeEnv(MiniGridEnv):
                     fails += 1
                     passed = False
                     continue
-
+            
+            #print(f'Length Total: {len(sg_pairs)}\nLength Train: {len(sgc_trained)}\nLength Probe: {len(sg_pairs_test)}\nChunk Size: {chunk_size}')
             return [(m,n,p) for m, n, o, p in sg_pairs]
       
         def gen_pi_vc_f1_no_cue():
-            index_size = 32
             chunk_size = 4
             # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
             # LL:0, RR:1, RL:2, LR:3
@@ -1366,13 +1367,14 @@ class CornerMazeEnv(MiniGridEnv):
                     random.shuffle(sg_pairs_temp)
                     sgc_list += sg_pairs_temp.copy()
                 
+                len_sgc_list = len(sgc_list)
                 for i, sgp in enumerate(sgc_list[0:-3]):
                     if sgp[0] == sgc_list[i + 1][0] and sgp[0] == sgc_list[i + 2][0] and sgp[0] == sgc_list[i + 3][0]:
                         start_fourpeat += 1
                     if sgp[0] == sgc_list[i + 1][0] and sgp[0] == sgc_list[i + 2][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
-                    if i == index_size - 4 and sgc_list[i + 1][0] == sgc_list[i + 2][0] and sgc_list[i + 1][0] == \
+                    if i == len_sgc_list - 4 and sgc_list[i + 1][0] == sgc_list[i + 2][0] and sgc_list[i + 1][0] == \
                             sgc_list[i + 3][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
@@ -1401,6 +1403,8 @@ class CornerMazeEnv(MiniGridEnv):
                     fails += 1
                     passed = False
                     continue
+            
+            #print(f'Length Total: {len(sgc_list)}\nChunk Size: {chunk_size}')
             return [(m,n,p) for m, n, o, p in sgc_list]
 
         def gen_pi_vc_f1_rotate():
@@ -1572,15 +1576,14 @@ class CornerMazeEnv(MiniGridEnv):
                     passed = False
                     continue
             
-            print(f"fails: {fails} len: {len(sg_pairs)}")       
-            return [(m,n,p) for m, n, o, p in sgc_list]
+            #print(f'Length Total: {len(sg_pairs)}\nChunk Size: {chunk_size}')       
+            return [(m,n,p) for m, n, o, p in sg_pairs]
 
         def gen_pi_vc_f1_reversal():
             # The reversal probe has a total of 80 trials with the first 16 trials being acquisition
             # trials and the subsequent 64 trials being reversals. Each post acquisition trial chunk
             # is size 8.
-            index_size = 80
-            chunk_size = 9
+            chunk_size = 10
 
             # direct route to goal is added for easy checking of repeated routes and then removed  
             # when done creating list
@@ -1598,9 +1601,8 @@ class CornerMazeEnv(MiniGridEnv):
             elif self.agent_cue_goal_orientation == 'N/NW':
                 sgc_list = [((goal_location_index-1)%4, (goal_location_index+1)%4, 3, goal_location_index), 
                             (goal_location_index, (goal_location_index+1)%4, 0, goal_location_index)]
-            sg_pairs_trained = sgc_list * 4
+            sgc_trained = sgc_list * 4
 
-            sg_pairs_list = []
             # Adding novel route from start arm facing cue
             # LL:0, RR:1, RL:2, LR:3 
             # (start arm, cue, route, goal location index) 
@@ -1630,20 +1632,20 @@ class CornerMazeEnv(MiniGridEnv):
                 sg_pairs.clear()
                 # Shuffle lists in separate batches, of acquisition and probe portions
                 for i in range(chunk_size):
-                    if i < 1:
-                        random.shuffle(sg_pairs_trained)
-                        sg_pairs += sg_pairs_trained.copy()
+                    if i <= 1:
+                        random.shuffle(sgc_trained)
+                        sg_pairs += sgc_trained.copy()
                     else:
                         random.shuffle(sg_pairs_test)
                         sg_pairs += sg_pairs_test.copy()
-
+                len_sg_pairs = len(sg_pairs)
                 for i, sgp in enumerate(sg_pairs[0:-3]):
                     if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0] and sgp[0] == sg_pairs[i + 3][0]:
                         start_fourpeat += 1
                     if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
-                    if i == index_size - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
+                    if i == len_sg_pairs - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
                 # Catch four repeats or over threepeat limit
@@ -1654,7 +1656,8 @@ class CornerMazeEnv(MiniGridEnv):
                     fails += 1
                     passed = False
                     continue
-
+            
+            #print(f'Length Total: {len(sg_pairs)}\nLength Train: {len(sgc_trained)}\nLength Probe: {len(sg_pairs_test)}\nChunk Size: {chunk_size}')
             return [(m,n,p) for m, n, o, p in sg_pairs]
 
         def gen_pi_novel_route_no_cue():
@@ -1662,8 +1665,7 @@ class CornerMazeEnv(MiniGridEnv):
             # trials followed by a mix of 16 novel route trials interleaved with 8 acquisition
             # trials (4 and 4 from each arm). index_size is the total trials and chunks is the
             # number mini list to shuffle. This session uses no cue
-            index_size = 40
-            chunk_size = 5
+            chunk_size = 6
             # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
             # LL:0, RR:1, RL:2, LR:3
             # (start arm, cue, route, goal location index) 
@@ -1679,7 +1681,7 @@ class CornerMazeEnv(MiniGridEnv):
             elif self.agent_cue_goal_orientation == 'N/NW':
                 sgc_list = [((goal_location_index + 2) % 4, 4, 2, goal_location_index), 
                             (goal_location_index, 4, 0, goal_location_index)]
-            sg_pairs_trained = sgc_list * 8
+            sgc_trained = sgc_list * 4
 
             sg_pairs_list = []
             # Adding novel route from start arm facing cue
@@ -1727,10 +1729,10 @@ class CornerMazeEnv(MiniGridEnv):
                 passed = True
                 sg_pairs.clear()
                 for i in range(chunk_size):
-                    if i < 1:
-                        random.shuffle(sg_pairs_trained)
-                        sg_pairs += sg_pairs_trained.copy()
-                    elif i == 1:
+                    if i <= 1:
+                        random.shuffle(sgc_trained)
+                        sg_pairs += sgc_trained.copy()
+                    elif i == 2:
                         # Make sure after end of acquisition trial the next trial is a probe
                         sg_pairs_test.remove(temp_item)
                         random.shuffle(sg_pairs_test)
@@ -1743,14 +1745,14 @@ class CornerMazeEnv(MiniGridEnv):
                             continue
                         else:
                             sg_pairs += sg_pairs_test.copy()
-
+                len_sg_pairs = len(sg_pairs)
                 for i, sgp in enumerate(sg_pairs[0:-3]):
                     if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0] and sgp[0] == sg_pairs[i + 3][0]:
                         start_fourpeat += 1
                     if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
-                    if i == index_size - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
+                    if i == len_sg_pairs - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
                 # Catch four repeats or over threepeat limit
@@ -1761,15 +1763,15 @@ class CornerMazeEnv(MiniGridEnv):
                     fails += 1
                     passed = False
                     continue
-
+            
+            #print(f'Length Total: {len(sg_pairs)}\nLength Train: {len(sgc_trained)}\nLength Probe: {len(sg_pairs_test)}\nChunk Size: {chunk_size}')
             return [(m,n,p) for m, n, o, p in sg_pairs]        
 
         def gen_pi_reversal_no_cue():
             # The reversal probe has a total of 80 trials with the first 16 trials being acquisition
             # trials and the subsequent 64 trials being reversals. Each post acquisition trial chunk
             # is size 8.
-            index_size = 80
-            chunk_size = 9
+            chunk_size = 10
 
             # direct route to goal is added for easy checking of repeated routes and then removed  
             # when done creating list
@@ -1787,7 +1789,7 @@ class CornerMazeEnv(MiniGridEnv):
             elif self.agent_cue_goal_orientation == 'N/NW':
                 sgc_list = [((goal_location_index + 2) % 4, 4, 2, goal_location_index), 
                             (goal_location_index, 4, 0, goal_location_index)]
-            sg_pairs_trained = sgc_list * 8
+            sgc_trained = sgc_list * 4
 
             sg_pairs_list = []
             # Adding novel route from start arm facing cue
@@ -1819,20 +1821,20 @@ class CornerMazeEnv(MiniGridEnv):
                 sg_pairs.clear()
                 # Shuffle lists in separate batches, of acquisition and probe portions
                 for i in range(chunk_size):
-                    if i < 1:
-                        random.shuffle(sg_pairs_trained)
-                        sg_pairs += sg_pairs_trained.copy()
+                    if i <=1:
+                        random.shuffle(sgc_trained)
+                        sg_pairs += sgc_trained.copy()
                     else:
                         random.shuffle(sg_pairs_test)
                         sg_pairs += sg_pairs_test.copy()
-
+                len_sg_pairs = len(sg_pairs)
                 for i, sgp in enumerate(sg_pairs[0:-3]):
                     if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0] and sgp[0] == sg_pairs[i + 3][0]:
                         start_fourpeat += 1
                     if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
-                    if i == index_size - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
+                    if i == len_sg_pairs - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
                 # Catch four repeats or over threepeat limit
@@ -1843,7 +1845,8 @@ class CornerMazeEnv(MiniGridEnv):
                     fails += 1
                     passed = False
                     continue
-
+            
+            print(f'Length Total: {len(sg_pairs)}\nLength Train: {len(sgc_trained)}\nLength Probe: {len(sg_pairs_test)}\nChunk Size: {chunk_size}')
             return [(m,n,p) for m, n, o, p in sg_pairs]
         
         def gen_vc_acquisition():
@@ -1862,7 +1865,7 @@ class CornerMazeEnv(MiniGridEnv):
             elif self.agent_cue_goal_orientation == 'N/NW':
                 sgc_list = [(i, (i+1)%4, 0,i) for i in range(4)] + [((i+2)%4,(i+1)%4, 2,i) for i in range(4)]
 
-            sg_pairs_temp = sgc_list * 2
+            sg_pairs_temp = sgc_list
 
             start_repeat_limit = 3
             goal_repeat_limit = 3
@@ -2016,12 +2019,12 @@ class CornerMazeEnv(MiniGridEnv):
                     passed = False
                     continue
             
-            #print(f"fails: {fails} len: {len(sg_pairs)}")    
-            return [(m,n,p) for m, n, o, p in sgc_list]
+            #print(f'Length List: {len(sg_pairs)}')    
+            return [(m,n,p) for m, n, o, p in sg_pairs]
         
         def gen_vc_novel_route_rotate():
             # Novel route probe for VC sessions.
-            chunk_size = 2
+            chunk_size = 3
             # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
             # LL:0, RR:1, RL:2, LR:3
             # (start arm, cue, route, goal location index) 
@@ -2034,7 +2037,7 @@ class CornerMazeEnv(MiniGridEnv):
             elif self.agent_cue_goal_orientation == 'N/NW':
                 sgc_list = [(i, (i+1)%4, 0, i) for i in range(4)] + [((i+2)%4,(i+1)%4, 2, i) for i in range(4)]
 
-            sg_pairs_trained = sgc_list * 2
+            sgc_trained = sgc_list
 
             sg_pairs_list = []
             # Adding novel route from start arm facing cue
@@ -2078,10 +2081,10 @@ class CornerMazeEnv(MiniGridEnv):
                 passed = True
                 sg_pairs.clear()
                 for i in range(chunk_size):
-                    if i < 1:
-                        random.shuffle(sg_pairs_trained)
-                        sg_pairs += sg_pairs_trained.copy()
-                    elif i == 1:
+                    if i <= 1:
+                        random.shuffle(sgc_trained)
+                        sg_pairs += sgc_trained.copy()
+                    elif i == 2:
                         # Make sure after end of acquisition trial the next trial is a probe
                         sg_pairs_test.remove(temp_item)
                         random.shuffle(sg_pairs_test)
@@ -2224,13 +2227,13 @@ class CornerMazeEnv(MiniGridEnv):
                     passed = False
                     continue
             
-            print(f"fails: {fails} len: {len(sg_pairs)}")
+            #print(f'Length Total: {len(sg_pairs)}\nLength Train: {len(sgc_trained)}\nLength Probe: {len(sg_pairs_test)}\nChunk Size: {chunk_size}')
             return [(m,n,p) for m, n, o, p in sg_pairs]
 
         def gen_vc_reversal_rotate():
             # Reversal probe for VC sessions.
             # Use chunk size to control how many trials there are of reversal (in chunks of 8 trials)
-            chunk_size = 9
+            chunk_size = 10
             # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
             # LL:0, RR:1, RL:2, LR:3
             # (start arm, cue, route, goal location index) 
@@ -2242,7 +2245,7 @@ class CornerMazeEnv(MiniGridEnv):
                 sgc_list = [((i+1)%4,(i+2)%4,1,i) for i in range(4)] + [((i-1)%4,(i+2)%4, 3, i) for i in range(4)]
             elif self.agent_cue_goal_orientation == 'N/NW':
                 sgc_list = [(i, (i+1)%4, 0, i) for i in range(4)] + [((i+2)%4,(i+1)%4, 2, i) for i in range(4)]
-            sg_pairs_trained = sgc_list * 2
+            sgc_trained = sgc_list
 
             sg_pairs_list = []
             # Adding novel route from start arm facing cue
@@ -2281,9 +2284,9 @@ class CornerMazeEnv(MiniGridEnv):
                 passed = True
                 sg_pairs.clear()
                 for i in range(chunk_size):
-                    if i < 1:
-                        random.shuffle(sg_pairs_trained)
-                        sg_pairs += sg_pairs_trained.copy()
+                    if i <= 1:
+                        random.shuffle(sgc_trained)
+                        sg_pairs += sgc_trained.copy()
                     else:
                         random.shuffle(sg_pairs_test)
                         sg_pairs += sg_pairs_test.copy()
@@ -2418,14 +2421,15 @@ class CornerMazeEnv(MiniGridEnv):
                     continue
             
             #print(f"fails: {fails} len: {len(sg_pairs)}")
+            #print(f'Length Total: {len(sg_pairs)}\nLength Train: {len(sgc_trained)}\nLength Probe: {len(sg_pairs_test)}\nChunk Size: {chunk_size}')
             return [(m,n,p) for m, n, o, p in sg_pairs]
+
         #TODO: Test all condition are running the correct amount of trials and go through
         # all cue goal allignments as a file test. f1: is fixed first turn, f2: is fixed second
         # choice in regards to the correct route.
         if self.session_type == 'PI+VC f2 single trial':
             start_goal_cue_list = gen_pi_vc_f2_single_trial()
         elif self.session_type == 'PI+VC f2 acquisition':
-            print('been here')
             start_goal_cue_list = gen_pi_vc_f2_acq()
         elif self.session_type == 'PI+VC f2 novel route':
             start_goal_cue_list = gen_pi_vc_f2_novel_route()
@@ -2435,7 +2439,7 @@ class CornerMazeEnv(MiniGridEnv):
             start_goal_cue_list = gen_pi_vc_f2_rotate()
         elif self.session_type == 'PI+VC f2 reversal':
             start_goal_cue_list = gen_pi_vc_f2_reversal()
-        elif self.session_type == 'PI+VC f1 acquistion':
+        elif self.session_type == 'PI+VC f1 acquisition':
             start_goal_cue_list = gen_pi_vc_f1_acq()
         elif self.session_type == 'PI+VC f1 novel route':
             start_goal_cue_list = gen_pi_vc_f1_novel_route()
@@ -3204,8 +3208,10 @@ def main():
         6: "D"
     }
     # Session_types: 
-    # 'PI+VC f2 acquisition', 'PI+VC f2 novel route', 'PI+VC f2 rotate', 'PI+VC f2 no cue', 'PI+VC f2 rotate'
-
+    # 'PI+VC f2 acquisition', 'PI+VC f2 novel route', 'PI+VC f2 rotate', 'PI+VC f2 no cue', 'PI+VC f2 reversal'
+    # 'PI+VC f1 acquisition', 'PI+VC f1 novel route', 'PI+VC f1 rotate', 'PI+VC f1 no cue', 'PI+VC f1 reversal'
+    # 'PI acquisition', 'PI novel route cue', 'PI novel route no cue', 'PI reversal cue', 'PI reversal no cue'
+    # 'VC acquisition' 'VC novel route fixed', 'VC novel route rotate', 'VC reversal fixed', 'VC reversal rotate'
     if mode == 0:
         env = CornerMazeEnv(render_mode="human",
                             max_steps=10000,
@@ -3229,12 +3235,11 @@ def main():
         env = CornerMazeEnv(render_mode="human",
                             max_steps=10000,
                             agent_cue_goal_orientation='N/NE',
-                            start_goal_location = 'NE',
-                            session_type='PI+VC f2 acquisition',
+                            start_goal_location = 'random',
+                            session_type='VC reversal rotate',
                             run_mode=mode)
         manual_control = ManualControl(env, seed=42)
         manual_control.start()
-
     elif mode == 3:
         MODEL = 'PPO'
         STEPS = 900
@@ -3390,8 +3395,8 @@ def main():
             #env = CornerMazeEnv(render_mode="rgb_array",
                                 max_steps=STEPS,
                                 agent_cue_goal_orientation='N/NE',
-                                start_goal_location = 'SW',
-                                session_type='PI+VC reversal',
+                                start_goal_location = 'random',
+                                session_type='PI acquisition',
                                 run_mode=mode)
             
             env = ImgObsWrapper(env)
