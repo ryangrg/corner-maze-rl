@@ -617,11 +617,13 @@ class CornerMazeEnv(MiniGridEnv):
             goal_location_index = 2
         elif self.start_goal_location == 'NW':
             goal_location_index = 3
+        elif self.start_goal_location == 'random':
+            goal_location_index = random.randint(0,3)
         else:
-            goal_location_index = None
+            goal_location_index = random.randint(0,3)
        
         # returns list start goal pairs (start arm, goal)
-        def gen_pi_vc_single_trial():
+        def gen_pi_vc_f2_single_trial():
             # Cue is always in the north postion for this session type and goal is adjusted based
             # cue goal orientation
             # sgc element: (start arm, cue, goal location index) 
@@ -636,7 +638,8 @@ class CornerMazeEnv(MiniGridEnv):
 
             return sgc_list
 
-        def gen_pi_vc_acq():
+        def gen_pi_vc_f2_acq():
+            print('been here')
             # Acquisition session are a total of 32 trials and shuffled in chunks of 16 trials
             index_size = 32
             chunk_size = 4
@@ -678,7 +681,7 @@ class CornerMazeEnv(MiniGridEnv):
                     if sgp[0] == sgc_list[i + 1][0] and sgp[0] == sgc_list[i + 2][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
-                    if i == index_size - 4 and sgc_list[i + 1][0] == sgc_list[i + 2][0] and sgc_list[i + 1][0] == \
+                    if i == len(sgc_list) - 4 and sgc_list[i + 1][0] == sgc_list[i + 2][0] and sgc_list[i + 1][0] == \
                             sgc_list[i + 3][0]:
                         start_threepeat += 1
                         start_repeat_loc.append(i)
@@ -707,9 +710,11 @@ class CornerMazeEnv(MiniGridEnv):
                     fails += 1
                     passed = False
                     continue
+            
+            print(f'Length List: {sgc_list}')
             return [(m,n,p) for m, n, o, p in sgc_list]
 
-        def gen_pi_vc_novel_route():
+        def gen_pi_vc_f2_novel_route():
             # The novel route probe session is 40 trials with the first 16 trials being acquisition
             # trials followed by a mix of 16 novel route trials interleaved with 8 acquisition
             # trials (4 and 4 from each arm). index_size is the total trials and chunks is the
@@ -731,7 +736,7 @@ class CornerMazeEnv(MiniGridEnv):
             elif self.agent_cue_goal_orientation == 'N/NW':
                 sgc_list = [((goal_location_index + 2) % 4, (goal_location_index + 1) % 4, 2, goal_location_index), 
                             (goal_location_index, (goal_location_index + 1) % 4, 0, goal_location_index)]
-            sg_pairs_trained = sgc_list * 8
+            sg_pairs_trained = sgc_list * 4
 
             sg_pairs_list = []
             # Adding novel route from start arm facing cue
@@ -816,8 +821,8 @@ class CornerMazeEnv(MiniGridEnv):
 
             return [(m,n,p) for m, n, o, p in sg_pairs]
         
-        def gen_pi_vc_no_cue():
-            # Acquisition session are a total of 32 trials and shuffled in chunks of 16 trials
+        def gen_pi_vc_f2_no_cue():
+            # No cue probe session PI+VC acquisition subjects 
             index_size = 32
             chunk_size = 4
             # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
@@ -889,7 +894,7 @@ class CornerMazeEnv(MiniGridEnv):
                     continue
             return [(m,n,p) for m, n, o, p in sgc_list]
 
-        def gen_pi_vc_rotate():
+        def gen_pi_vc_f2_rotate():
             # PI+VC session are a total of 16 trials and shuffled as one chunk
             # This is to limit habit development in the rat.
             chunk_size = 2
@@ -1062,7 +1067,7 @@ class CornerMazeEnv(MiniGridEnv):
             print(f"fails: {fails} len: {len(sg_pairs)}")       
             return [(m,n,p) for m, n, o, p in sgc_list]
         
-        def gen_pi_vc_reversal():
+        def gen_pi_vc_f2_reversal():
             # The reversal probe has a total of 80 trials with the first 16 trials being acquisition
             # trials and the subsequent 64 trials being reversals. Each post acquisition trial chunk
             # is size 8.
@@ -1143,7 +1148,515 @@ class CornerMazeEnv(MiniGridEnv):
                     continue
 
             return [(m,n,p) for m, n, o, p in sg_pairs]
-        
+
+        def gen_pi_vc_f1_acq():
+            # Acquisition session are a total of 32 trials and shuffled in chunks of 16 trials
+            index_size = 32
+            chunk_size = 4
+            # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
+            # LL:0, RR:1, RL:2, LR:3
+            # (start arm, cue, route, goal location index)
+            # print 
+            if self.agent_cue_goal_orientation == 'N/NE':
+                sgc_list = [((goal_location_index + 1) % 4, goal_location_index, 1, goal_location_index), 
+                            ((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/SE':
+                sgc_list = [((goal_location_index+1)%4, (goal_location_index-1)%4, 1, goal_location_index), 
+                            ((goal_location_index+2)%4, (goal_location_index-1)%4, 2, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/SW':
+                sgc_list = [((goal_location_index-1)%4, (goal_location_index+2)%4, 3, goal_location_index), 
+                            (goal_location_index, (goal_location_index+2)%4, 0, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/NW':
+                sgc_list = [((goal_location_index-1)%4, (goal_location_index+1)%4, 3, goal_location_index), 
+                            (goal_location_index, (goal_location_index+1)%4, 0, goal_location_index)]
+            sg_pairs_temp = sgc_list * 4
+
+            start_repeat_limit = 2
+            start_threepeat = 0
+            start_fourpeat = 0
+            start_repeat_loc = []
+            sgc_list = []
+            passed = False
+            fails = 0
+            while not passed:
+                passed = True
+                sgc_list.clear()
+                for _ in range(chunk_size):
+                    random.shuffle(sg_pairs_temp)
+                    sgc_list += sg_pairs_temp.copy()
+                
+                for i, sgp in enumerate(sgc_list[0:-3]):
+                    if sgp[0] == sgc_list[i + 1][0] and sgp[0] == sgc_list[i + 2][0] and sgp[0] == sgc_list[i + 3][0]:
+                        start_fourpeat += 1
+                    if sgp[0] == sgc_list[i + 1][0] and sgp[0] == sgc_list[i + 2][0]:
+                        start_threepeat += 1
+                        start_repeat_loc.append(i)
+                    if i == index_size - 4 and sgc_list[i + 1][0] == sgc_list[i + 2][0] and sgc_list[i + 1][0] == \
+                            sgc_list[i + 3][0]:
+                        start_threepeat += 1
+                        start_repeat_loc.append(i)
+                # Catch four repeats or over threepeat limit
+                if (start_fourpeat > 0 or start_threepeat > start_repeat_limit):
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+
+                # Catch route threepeats that are too close together for first occurance
+                if (len(start_repeat_loc) == 3 and ((start_repeat_loc[1] - start_repeat_loc[0]) < 16) or
+                        (len(start_repeat_loc) == 2 and ((start_repeat_loc[1] - start_repeat_loc[0]) < 16))):
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+                if len(start_repeat_loc) == 3 and (start_repeat_loc[2] - start_repeat_loc[1] < 16):
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+            return [(m,n,p) for m, n, o, p in sgc_list]
+
+        def gen_pi_vc_f1_novel_route():
+            # trained on f1 (fixed first turn with alternating second turn) novel route with have
+            # an alternate first turn.
+            # The novel route probe session is 40 trials with the first 16 trials being acquisition
+            # trials followed by a mix of 16 novel route trials interleaved with 8 acquisition
+            # trials (4 and 4 from each arm). index_size is the total trials and chunks is the
+            # number mini list to shuffle
+            index_size = 40
+            chunk_size = 5
+            # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
+            # LL:0, RR:1, RL:2, LR:3
+            # (start arm, cue, route, goal location index) 
+            if self.agent_cue_goal_orientation == 'N/NE':
+                sgc_list = [((goal_location_index + 1) % 4, goal_location_index, 1, goal_location_index), 
+                            ((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/SE':
+                sgc_list = [((goal_location_index+1)%4, (goal_location_index-1)%4, 1, goal_location_index), 
+                            ((goal_location_index+2)%4, (goal_location_index-1)%4, 2, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/SW':
+                sgc_list = [((goal_location_index-1)%4, (goal_location_index+2)%4, 3, goal_location_index), 
+                            (goal_location_index, (goal_location_index+2)%4, 0, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/NW':
+                sgc_list = [((goal_location_index-1)%4, (goal_location_index+1)%4, 3, goal_location_index), 
+                            (goal_location_index, (goal_location_index+1)%4, 0, goal_location_index)]
+            sg_pairs_trained = sgc_list * 8
+
+            sg_pairs_list = []
+            # Adding novel route from start arm facing cue
+            # LL:0, RR:1, RL:2, LR:3 
+            # (start arm, cue, route, goal location index) 
+            if self.agent_cue_goal_orientation == 'N/NE':
+                sg_pairs_list = [((goal_location_index + 1) % 4, goal_location_index, 1, goal_location_index), 
+                                 ((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index),
+                                 ((goal_location_index - 1) % 4, goal_location_index, 3, goal_location_index), 
+                                 ((goal_location_index - 1) % 4, goal_location_index, 3, goal_location_index),
+                                 ((goal_location_index - 1) % 4, goal_location_index, 3, goal_location_index), 
+                                 ((goal_location_index - 1) % 4, goal_location_index, 3, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/SE':
+                sg_pairs_list = [((goal_location_index + 1) % 4, (goal_location_index - 1) % 4, 1, goal_location_index), 
+                                 ((goal_location_index + 2) % 4, (goal_location_index - 1) % 4, 2, goal_location_index),
+                                 (goal_location_index, (goal_location_index - 1) % 4, 0, goal_location_index), 
+                                 (goal_location_index, (goal_location_index - 1) % 4, 0, goal_location_index),
+                                 (goal_location_index, (goal_location_index - 1) % 4, 0, goal_location_index), 
+                                 (goal_location_index, (goal_location_index - 1) % 4, 0, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/SW':
+                sg_pairs_list = [((goal_location_index - 1) % 4, (goal_location_index - 2) % 4, 3, goal_location_index), 
+                                 (goal_location_index, (goal_location_index - 2) % 4, 0, goal_location_index),
+                                 ((goal_location_index + 1) % 4, (goal_location_index - 2) % 4, 1, goal_location_index), 
+                                 ((goal_location_index + 1) % 4, (goal_location_index - 2) % 4, 1, goal_location_index),
+                                 ((goal_location_index + 1) % 4, (goal_location_index - 2) % 4, 1, goal_location_index), 
+                                 ((goal_location_index + 1) % 4, (goal_location_index - 2) % 4, 1, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/NW':
+                sg_pairs_list = [((goal_location_index - 1) % 4, (goal_location_index + 1) % 4, 3, goal_location_index), 
+                                 (goal_location_index, (goal_location_index + 1) % 4, 0, goal_location_index),
+                                 ((goal_location_index + 2) % 4, (goal_location_index + 1) % 4, 2, goal_location_index), 
+                                 ((goal_location_index + 2) % 4, (goal_location_index + 1) % 4, 2, goal_location_index),
+                                 ((goal_location_index + 2) % 4, (goal_location_index + 1) % 4, 2, goal_location_index), 
+                                 ((goal_location_index + 2) % 4, (goal_location_index + 1) % 4, 2, goal_location_index)]
+            sg_pairs_test = sg_pairs_list
+
+            start_threepeat_limit = 0
+            start_threepeat = 0
+            start_fourpeat = 0
+            start_repeat_loc = []
+            sg_pairs = []
+            temp_item = sg_pairs_test[-1]
+            passed = False
+            fails = 0
+            while not passed:
+                passed = True
+                sg_pairs.clear()
+                for i in range(chunk_size):
+                    if i < 1:
+                        random.shuffle(sg_pairs_trained)
+                        sg_pairs += sg_pairs_trained.copy()
+                    elif i == 1:
+                        # Make sure after end of acquisition trial the next trial is a probe
+                        sg_pairs_test.remove(temp_item)
+                        random.shuffle(sg_pairs_test)
+                        sg_pairs += [temp_item] + sg_pairs_test.copy()
+                        sg_pairs_test.append(temp_item)
+                    else:
+                        random.shuffle(sg_pairs_test)
+                        if sg_pairs[-6:] == sg_pairs_test:
+                            passed = False
+                            continue
+                        else:
+                            sg_pairs += sg_pairs_test.copy()
+
+                for i, sgp in enumerate(sg_pairs[0:-3]):
+                    if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0] and sgp[0] == sg_pairs[i + 3][0]:
+                        start_fourpeat += 1
+                    if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0]:
+                        start_threepeat += 1
+                        start_repeat_loc.append(i)
+                    if i == index_size - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
+                        start_threepeat += 1
+                        start_repeat_loc.append(i)
+                # Catch four repeats or over threepeat limit
+                if (start_fourpeat > 0 or start_threepeat > start_threepeat_limit):
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+
+            return [(m,n,p) for m, n, o, p in sg_pairs]
+      
+        def gen_pi_vc_f1_no_cue():
+            index_size = 32
+            chunk_size = 4
+            # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
+            # LL:0, RR:1, RL:2, LR:3
+            # (start arm, cue, route, goal location index) cue = 4 <- No Cue
+            # print 
+            if self.agent_cue_goal_orientation == 'N/NE':
+                sgc_list = [((goal_location_index + 1) % 4, 4, 1, goal_location_index), 
+                            ((goal_location_index + 2) % 4, 4, 2, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/SE':
+                sgc_list = [((goal_location_index+1)%4, 4, 1, goal_location_index), 
+                            ((goal_location_index+2)%4, 4, 2, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/SW':
+                sgc_list = [((goal_location_index-1)%4, 4, 3, goal_location_index), 
+                            (goal_location_index, 4, 0, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/NW':
+                sgc_list = [((goal_location_index-1)%4, 4, 3, goal_location_index), 
+                            (goal_location_index, 4, 0, goal_location_index)]
+            sg_pairs_temp = sgc_list * 4
+
+            start_repeat_limit = 2
+            start_threepeat = 0
+            start_fourpeat = 0
+            start_repeat_loc = []
+            sgc_list = []
+            passed = False
+            fails = 0
+            while not passed:
+                passed = True
+                sgc_list.clear()
+                for _ in range(chunk_size):
+                    random.shuffle(sg_pairs_temp)
+                    sgc_list += sg_pairs_temp.copy()
+                
+                for i, sgp in enumerate(sgc_list[0:-3]):
+                    if sgp[0] == sgc_list[i + 1][0] and sgp[0] == sgc_list[i + 2][0] and sgp[0] == sgc_list[i + 3][0]:
+                        start_fourpeat += 1
+                    if sgp[0] == sgc_list[i + 1][0] and sgp[0] == sgc_list[i + 2][0]:
+                        start_threepeat += 1
+                        start_repeat_loc.append(i)
+                    if i == index_size - 4 and sgc_list[i + 1][0] == sgc_list[i + 2][0] and sgc_list[i + 1][0] == \
+                            sgc_list[i + 3][0]:
+                        start_threepeat += 1
+                        start_repeat_loc.append(i)
+                # Catch four repeats or over threepeat limit
+                if (start_fourpeat > 0 or start_threepeat > start_repeat_limit):
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+
+                # Catch route threepeats that are too close together for first occurance
+                if (len(start_repeat_loc) == 3 and ((start_repeat_loc[1] - start_repeat_loc[0]) < 16) or
+                        (len(start_repeat_loc) == 2 and ((start_repeat_loc[1] - start_repeat_loc[0]) < 16))):
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+                if len(start_repeat_loc) == 3 and (start_repeat_loc[2] - start_repeat_loc[1] < 16):
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+            return [(m,n,p) for m, n, o, p in sgc_list]
+
+        def gen_pi_vc_f1_rotate():
+            # PI+VC session are a total of 16 trials and shuffled as one chunk
+            # This is to limit habit development in the rat.
+            chunk_size = 2
+            # direct route to goal is added for easy checking of repeated routes and then removed  when done creating list
+            # LL:0, RR:1, RL:2, LR:3
+            # (start arm, cue, route, goal location index)
+            if self.agent_cue_goal_orientation == 'N/NE':
+                sgc_list = [((i+1)%4,i,1,i) for i in range(4)] + [((i+2)%4,i,2,i) for i in range(4)]
+            elif self.agent_cue_goal_orientation == 'N/SE':
+                sgc_list = [((i+1)%4, (i-1)%4, 1,i) for i in range(4)] + [((i+2)%4,(i-1)%4, 2,i) for i in range(4)]
+            elif self.agent_cue_goal_orientation == 'N/SW':
+                sgc_list = [(i,(i+2)%4,0,i) for i in range(4)] + [((i-1)%4,(i+2)%4,3,i) for i in range(4)]
+            elif self.agent_cue_goal_orientation == 'N/NW':
+                sgc_list = [(i, (i+1)%4, 0,i) for i in range(4)] + [((i-1)%4,(i+1)%4, 3,i) for i in range(4)]
+            sg_pairs_temp = sgc_list
+
+            start_repeat_limit = 3
+            goal_repeat_limit = 3
+            route_repeat_limit = 3
+            start_threepeat = 0
+            start_fourpeat = 0
+            goal_fourpeat = 0
+            goal_threepeat = 0
+            route_fourpeat = 0
+            route_threepeat = 0
+            start_repeat_loc = []
+            route_repeat_loc = []
+            goal_repeat_loc = []
+            sg_pairs = []
+            passed = False
+            fails = 0
+            while not passed:
+                passed = True
+                sg_pairs.clear()
+                for _ in range(chunk_size):
+                    random.shuffle(sg_pairs_temp)
+                    sg_pairs += sg_pairs_temp.copy()
+                
+                # catch fourpeats and locations of threepeats - this is to make sure threepeats aren't
+                # too close together.
+                for i, sgp in enumerate(sg_pairs[0:-3]):
+                    if sgp[2] == sg_pairs[i + 1][2] and sgp[2] == sg_pairs[i + 2][2] and sgp[2] == sg_pairs[i + 3][2]:
+                        route_fourpeat += 1
+                    if sgp[1] == sg_pairs[i + 1][1] and sgp[1] == sg_pairs[i + 2][1] and sgp[1] == sg_pairs[i + 3][1]:
+                        goal_fourpeat += 1
+                    if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0] and sgp[0] == sg_pairs[i + 3][0]:
+                        start_fourpeat += 1
+                    if sgp[2] == sg_pairs[i + 1][2] and sgp[2] == sg_pairs[i + 2][2]:
+                        route_threepeat += 1
+                        route_repeat_loc.append(i)
+                    if sgp[1] == sg_pairs[i + 1][1] and sgp[1] == sg_pairs[i + 2][1]:
+                        goal_threepeat += 1
+                        goal_repeat_loc.append(i)
+                    if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0]:
+                        start_threepeat += 1
+                        start_repeat_loc.append(i)
+                
+                # Catch four repeats or over threepeat limit
+                if (route_fourpeat > 0 or goal_fourpeat > 0 or start_fourpeat > 0 or
+                        route_threepeat > route_repeat_limit or
+                        goal_threepeat > goal_repeat_limit or
+                        start_threepeat > start_repeat_limit):
+                    route_threepeat = 0
+                    goal_threepeat = 0
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    goal_fourpeat = 0
+                    route_fourpeat = 0
+                    route_repeat_loc = []
+                    goal_repeat_loc = []
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+
+                # Catch route threepeats that are too close together for first occurrence
+                if (len(route_repeat_loc) == 3 and (route_repeat_loc[1] - route_repeat_loc[0] < 16) or
+                        (len(route_repeat_loc) == 2 and route_repeat_loc[1] - route_repeat_loc[0] < 16)):
+                    sg_pairs = []
+                    route_threepeat = 0
+                    goal_threepeat = 0
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    goal_fourpeat = 0
+                    route_fourpeat = 0
+                    route_repeat_loc = []
+                    goal_repeat_loc = []
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+                if len(route_repeat_loc) == 3 and (route_repeat_loc[2] - route_repeat_loc[1] < 16):
+                    sg_pairs = []
+                    route_threepeat = 0
+                    goal_threepeat = 0
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    goal_fourpeat = 0
+                    route_fourpeat = 0
+                    route_repeat_loc = []
+                    goal_repeat_loc = []
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+
+                # Catch goal threepeats that are too close together for first occurance
+                if (len(goal_repeat_loc) == 3 and (goal_repeat_loc[1] - goal_repeat_loc[0] < 16) or
+                        (len(goal_repeat_loc) == 2 and goal_repeat_loc[1] - goal_repeat_loc[0] < 16)):
+                    sg_pairs = []
+                    route_threepeat = 0
+                    goal_threepeat = 0
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    goal_fourpeat = 0
+                    route_fourpeat = 0
+                    route_repeat_loc = []
+                    goal_repeat_loc = []
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+                if len(goal_repeat_loc) == 3 and (goal_repeat_loc[2] - goal_repeat_loc[1] < 16):
+                    sg_pairs = []
+                    route_threepeat = 0
+                    goal_threepeat = 0
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    goal_fourpeat = 0
+                    route_fourpeat = 0
+                    route_repeat_loc = []
+                    goal_repeat_loc = []
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+                
+                # Catch route threepeats that are too close together for first occurance
+                if (len(start_repeat_loc) == 3 and (start_repeat_loc[1] - start_repeat_loc[0] < 16) or
+                        (len(start_repeat_loc) == 2 and start_repeat_loc[1] - start_repeat_loc[0] < 16)):
+                    sg_pairs = []
+                    route_threepeat = 0
+                    goal_threepeat = 0
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    goal_fourpeat = 0
+                    route_fourpeat = 0
+                    route_repeat_loc = []
+                    goal_repeat_loc = []
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+                if len(start_repeat_loc) == 3 and (start_repeat_loc[2] - start_repeat_loc[1] < 16):
+                    sg_pairs = []
+                    route_threepeat = 0
+                    goal_threepeat = 0
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    goal_fourpeat = 0
+                    route_fourpeat = 0
+                    route_repeat_loc = []
+                    goal_repeat_loc = []
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+            
+            print(f"fails: {fails} len: {len(sg_pairs)}")       
+            return [(m,n,p) for m, n, o, p in sgc_list]
+
+        def gen_pi_vc_f1_reversal():
+            # The reversal probe has a total of 80 trials with the first 16 trials being acquisition
+            # trials and the subsequent 64 trials being reversals. Each post acquisition trial chunk
+            # is size 8.
+            index_size = 80
+            chunk_size = 9
+
+            # direct route to goal is added for easy checking of repeated routes and then removed  
+            # when done creating list
+            # LL:0, RR:1, RL:2, LR:3
+            # (start arm, cue, route, goal location index) 
+            if self.agent_cue_goal_orientation == 'N/NE':
+                sgc_list = [((goal_location_index + 1) % 4, goal_location_index, 1, goal_location_index), 
+                            ((goal_location_index + 2) % 4, goal_location_index, 2, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/SE':
+                sgc_list = [((goal_location_index+1)%4, (goal_location_index-1)%4, 1, goal_location_index), 
+                            ((goal_location_index+2)%4, (goal_location_index-1)%4, 2, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/SW':
+                sgc_list = [((goal_location_index-1)%4, (goal_location_index+2)%4, 3, goal_location_index), 
+                            (goal_location_index, (goal_location_index+2)%4, 0, goal_location_index)]
+            elif self.agent_cue_goal_orientation == 'N/NW':
+                sgc_list = [((goal_location_index-1)%4, (goal_location_index+1)%4, 3, goal_location_index), 
+                            (goal_location_index, (goal_location_index+1)%4, 0, goal_location_index)]
+            sg_pairs_trained = sgc_list * 4
+
+            sg_pairs_list = []
+            # Adding novel route from start arm facing cue
+            # LL:0, RR:1, RL:2, LR:3 
+            # (start arm, cue, route, goal location index) 
+            if self.agent_cue_goal_orientation == 'N/NE':
+                sgc_list = [((goal_location_index + 1) % 4, goal_location_index, 1, (goal_location_index+2)%4), 
+                            ((goal_location_index + 2) % 4, goal_location_index, 2, (goal_location_index+2)%4)]
+            elif self.agent_cue_goal_orientation == 'N/SE':
+                sgc_list = [((goal_location_index+1)%4, (goal_location_index-1)%4, 1, (goal_location_index+2)%4), 
+                            ((goal_location_index+2)%4, (goal_location_index-1)%4, 2, (goal_location_index+2)%4)]
+            elif self.agent_cue_goal_orientation == 'N/SW':
+                sgc_list = [((goal_location_index-1)%4, (goal_location_index+2)%4, 3, (goal_location_index+2)%4), 
+                            (goal_location_index, (goal_location_index+2)%4, 0, (goal_location_index+2)%4)]
+            elif self.agent_cue_goal_orientation == 'N/NW':
+                sgc_list = [((goal_location_index-1)%4, (goal_location_index+1)%4, 3, (goal_location_index+2)%4), 
+                            (goal_location_index, (goal_location_index+1)%4, 0, (goal_location_index+2)%4)]
+            sg_pairs_test = sgc_list * 4
+
+            start_threepeat_limit = 0
+            start_threepeat = 0
+            start_fourpeat = 0
+            start_repeat_loc = []
+            sg_pairs = []
+            passed = False
+            fails = 0
+            while not passed:
+                passed = True
+                sg_pairs.clear()
+                # Shuffle lists in separate batches, of acquisition and probe portions
+                for i in range(chunk_size):
+                    if i < 1:
+                        random.shuffle(sg_pairs_trained)
+                        sg_pairs += sg_pairs_trained.copy()
+                    else:
+                        random.shuffle(sg_pairs_test)
+                        sg_pairs += sg_pairs_test.copy()
+
+                for i, sgp in enumerate(sg_pairs[0:-3]):
+                    if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0] and sgp[0] == sg_pairs[i + 3][0]:
+                        start_fourpeat += 1
+                    if sgp[0] == sg_pairs[i + 1][0] and sgp[0] == sg_pairs[i + 2][0]:
+                        start_threepeat += 1
+                        start_repeat_loc.append(i)
+                    if i == index_size - 4 and sg_pairs[i + 1][0] == sg_pairs[i + 2][0] and sg_pairs[i + 1][0] == sg_pairs[i + 3][0]:
+                        start_threepeat += 1
+                        start_repeat_loc.append(i)
+                # Catch four repeats or over threepeat limit
+                if (start_fourpeat > 0 or start_threepeat > start_threepeat_limit):
+                    start_threepeat = 0
+                    start_fourpeat = 0
+                    start_repeat_loc = []
+                    fails += 1
+                    passed = False
+                    continue
+
+            return [(m,n,p) for m, n, o, p in sg_pairs]
+
         def gen_pi_novel_route_no_cue():
             # The novel route probe session is 40 trials with the first 16 trials being acquisition
             # trials followed by a mix of 16 novel route trials interleaved with 8 acquisition
@@ -1907,39 +2420,53 @@ class CornerMazeEnv(MiniGridEnv):
             #print(f"fails: {fails} len: {len(sg_pairs)}")
             return [(m,n,p) for m, n, o, p in sg_pairs]
         #TODO: Test all condition are running the correct amount of trials and go through
-        # all cue goal allignments as a file test.
-        if self.session_type == 'PI+VC single trial':
-            start_goal_cue_list = gen_pi_vc_single_trial()
-        elif self.session_type == 'PI+VC acquisition':
-            start_goal_cue_list = gen_pi_vc_acq()
-        elif self.session_type == 'PI+VC novel route':
-            start_goal_cue_list = gen_pi_vc_novel_route()
-        elif self.session_type == 'PI+VC no cue':
-            start_goal_cue_list = gen_pi_vc_no_cue()
-        elif self.session_type == 'PI+VC rotate':
-            start_goal_cue_list = gen_pi_vc_rotate()
-        elif self.session_type == 'PI+VC reversal':
-            start_goal_cue_list = gen_pi_vc_reversal()
+        # all cue goal allignments as a file test. f1: is fixed first turn, f2: is fixed second
+        # choice in regards to the correct route.
+        if self.session_type == 'PI+VC f2 single trial':
+            start_goal_cue_list = gen_pi_vc_f2_single_trial()
+        elif self.session_type == 'PI+VC f2 acquisition':
+            print('been here')
+            start_goal_cue_list = gen_pi_vc_f2_acq()
+        elif self.session_type == 'PI+VC f2 novel route':
+            start_goal_cue_list = gen_pi_vc_f2_novel_route()
+        elif self.session_type == 'PI+VC f2 no cue':
+            start_goal_cue_list = gen_pi_vc_f2_no_cue()
+        elif self.session_type == 'PI+VC f2 rotate':
+            start_goal_cue_list = gen_pi_vc_f2_rotate()
+        elif self.session_type == 'PI+VC f2 reversal':
+            start_goal_cue_list = gen_pi_vc_f2_reversal()
+        elif self.session_type == 'PI+VC f1 acquistion':
+            start_goal_cue_list = gen_pi_vc_f1_acq()
+        elif self.session_type == 'PI+VC f1 novel route':
+            start_goal_cue_list = gen_pi_vc_f1_novel_route()
+        elif self.session_type == 'PI+VC f1 no cue':
+            start_goal_cue_list = gen_pi_vc_f1_no_cue()
+        elif self.session_type == 'PI+VC f1 rotate':
+            start_goal_cue_list = gen_pi_vc_f1_rotate()
+        elif self.session_type == 'PI+VC f1 reversal':
+            start_goal_cue_list = gen_pi_vc_f1_reversal()
         elif self.session_type == 'PI acquisition':
-            start_goal_cue_list = gen_pi_vc_no_cue() # same session design
+            start_goal_cue_list = gen_pi_vc_f2_no_cue() # same session design
         elif self.session_type == 'PI novel route no cue':
             start_goal_cue_list = gen_pi_novel_route_no_cue()
         elif self.session_type == 'PI novel route cue':
-            start_goal_cue_list = gen_pi_vc_novel_route()
+            start_goal_cue_list = gen_pi_vc_f2_novel_route()
         elif self.session_type == 'PI reversal no cue':
             start_goal_cue_list = gen_pi_reversal_no_cue()
         elif self.session_type == 'PI reversal cue':
-            start_goal_cue_list = gen_pi_vc_reversal()
+            start_goal_cue_list = gen_pi_vc_f2_reversal()
         elif self.session_type == 'VC acquisition':
             start_goal_cue_list = gen_vc_acquisition()
         elif self.session_type == 'VC novel route fixed':
-            start_goal_cue_list = gen_pi_vc_novel_route()
+            start_goal_cue_list = gen_pi_vc_f2_novel_route()
         elif self.session_type == 'VC novel route rotate':
             start_goal_cue_list = gen_vc_novel_route_rotate()
         elif self.session_type == 'VC reversal fixed':
-            start_goal_cue_list = gen_pi_vc_reversal()
+            start_goal_cue_list = gen_pi_vc_f2_reversal()
         elif self.session_type == 'VC reversal rotate':
             start_goal_cue_list = gen_vc_reversal_rotate()
+        else:
+            start_goal_cue_list = None
 
         #print(len(start_goal_cue_list))
         grid_configuration_sequence = []
@@ -2664,7 +3191,7 @@ def main():
     # run_mode 5: A2C RL model with single trial (train) No masking.
     # run_mode 6: Run trained RL model in inference mode
     # run_mode 7: Run trained RL model on novel route and continue training
-    mode = 7
+    mode = 2
     
     # Define the MiniGrid action legend
     action_legend = {
@@ -2676,6 +3203,8 @@ def main():
         5: "T",
         6: "D"
     }
+    # Session_types: 
+    # 'PI+VC f2 acquisition', 'PI+VC f2 novel route', 'PI+VC f2 rotate', 'PI+VC f2 no cue', 'PI+VC f2 rotate'
 
     if mode == 0:
         env = CornerMazeEnv(render_mode="human",
@@ -2701,12 +3230,11 @@ def main():
                             max_steps=10000,
                             agent_cue_goal_orientation='N/NE',
                             start_goal_location = 'NE',
-                            # Session_types: 'PI+VC acquisition'', 'PI+VC novel route',
-                            # 'PI+VC reversal', 'PI+VC no cue'
-                            session_type='PI+VC rotate',
+                            session_type='PI+VC f2 acquisition',
                             run_mode=mode)
         manual_control = ManualControl(env, seed=42)
         manual_control.start()
+
     elif mode == 3:
         MODEL = 'PPO'
         STEPS = 900
@@ -2722,7 +3250,7 @@ def main():
             env = CornerMazeEnv(render_mode="human",
                                 max_steps=STEPS,
                                 agent_cue_goal_orientation='N/NE',
-                                start_goal_location = 'NE',
+                                start_goal_location = 'N',
                                 session_type='VC reversal rotate',
                                 run_mode=mode)
             env = ImgObsWrapper(env)
@@ -2732,17 +3260,14 @@ def main():
                         seed=MODEL_SEED)
             # Initialize the callback with the specified report interval and verbose level
             #report_callback = CustomLoggingCallback(report_interval=100, print_actions=True,  action_legend=action_legend, verbose=
-
             # Specify the path to save the DataFrame as a Parquet file
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             trial_directory = f"{MODEL}-{STEPS}-{N_STEPS}-{BATCH_SIZE}-MagicWall"
-
             os.makedirs(f"model-data/{trial_directory}/trial_{timestamp}", exist_ok=True)
             path_1 = f"model-data/{trial_directory}/trial_{timestamp}/trial_data_env_{MODEL_SEED}_{STEPS}_{N_STEPS}_{BATCH_SIZE}_{timestamp}.parquet"
             path_2 = f"model-data/{trial_directory}/trial_{timestamp}/trial_data_sb3_{MODEL_SEED}_{STEPS}_{N_STEPS}_{BATCH_SIZE}_{timestamp}"
             print(f"Saving to path: {path_1}")
             callback = SaveEnvDataFrameCallback(save_path=path_1)
-
             # Train the model with the custom callback
             model.learn(total_timesteps=1e5, callback=callback)
             model.save(path_2)
