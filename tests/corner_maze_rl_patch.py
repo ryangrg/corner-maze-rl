@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 import torch as th
 
-from constants import * 
+from constants_patch import * 
 
 from gymnasium import spaces
 from gymnasium.core import ObsType
@@ -52,6 +52,47 @@ from sb3_contrib.common.maskable.policies import MaskableActorCriticPolicy
 from sb3_contrib.common.wrappers import ActionMasker
 from sb3_contrib.ppo_mask import MaskablePPO
 
+# Rotated coordinate helper tables
+DEFAULT_AGENT_START_POS = rotate_point((1, 1))
+DEFAULT_AGENT_START_DIR = rotate_dir(0)
+
+CORNER_LEFT_TURN_FIXES = {
+    rotate_point((2, 2)): (rotate_point((3, 2)), rotate_dir(0)),
+    rotate_point((10, 2)): (rotate_point((10, 3)), rotate_dir(1)),
+    rotate_point((10, 10)): (rotate_point((9, 10)), rotate_dir(2)),
+    rotate_point((2, 10)): (rotate_point((2, 9)), rotate_dir(3)),
+}
+
+WELL_EXIT_FORWARD_FIXES = {
+    rotate_point((1, 1)): (rotate_point((2, 2)), rotate_dir(1)),
+    rotate_point((11, 1)): (rotate_point((10, 2)), rotate_dir(2)),
+    rotate_point((11, 11)): (rotate_point((10, 10)), rotate_dir(3)),
+    rotate_point((1, 11)): (rotate_point((2, 10)), rotate_dir(0)),
+}
+
+WELL_ENTRY_PICKUP_FIXES = {
+    rotate_point((10, 2)): (rotate_point((11, 1)), rotate_dir(0)),
+    rotate_point((10, 10)): (rotate_point((11, 11)), rotate_dir(1)),
+    rotate_point((2, 10)): (rotate_point((1, 11)), rotate_dir(2)),
+    rotate_point((2, 2)): (rotate_point((1, 1)), rotate_dir(3)),
+}
+
+TURN_ONE_NS_MAP = {
+    rotate_point((6, 5)): 1,
+    rotate_point((6, 7)): 0,
+    rotate_point((5, 6)): 1,
+    rotate_point((7, 6)): 0,
+}
+
+TURN_ONE_EW_MAP = {
+    rotate_point((6, 5)): 0,
+    rotate_point((6, 7)): 1,
+    rotate_point((5, 6)): 0,
+    rotate_point((7, 6)): 1,
+}
+
+TURN_TWO_SET_A = {rotate_point(point) for point in [(7, 2), (5, 10), (2, 7), (10, 5)]}
+TURN_TWO_SET_B = {rotate_point(point) for point in [(5, 2), (7, 10), (2, 5), (10, 7)]}
 
 # Place the minigrid in the alternate monitor
 # Set the monitor index to choose the target monitor
@@ -172,8 +213,8 @@ class CornerMazeEnv(MiniGridEnv):
     def __init__(
         self,
         size=13,
-        agent_start_pos=(1, 1),
-        agent_start_dir=0,
+        agent_start_pos=DEFAULT_AGENT_START_POS,
+        agent_start_dir=DEFAULT_AGENT_START_DIR,
         max_steps: int | None = None,
         # Added initialization variables
         session_type: str | None = None,
@@ -2505,15 +2546,15 @@ class CornerMazeEnv(MiniGridEnv):
         # check where the start arm is and align the agent so it's pose
         # is facing the center of the maze.
         if self.grid_configuration_sequence[0][13] == 1:
-            return (6, 8), 3 # South start arm
+            return rotate_point((6, 8)), rotate_dir(3) # South start arm
         elif self.grid_configuration_sequence[0][14] == 1:
-            return (4, 6), 0 # West start arm
+            return rotate_point((4, 6)), rotate_dir(0) # West start arm
         elif self.grid_configuration_sequence[0][15] == 1:
-            return (6, 4), 1 # North start arm
+            return rotate_point((6, 4)), rotate_dir(1) # North start arm
         elif self.grid_configuration_sequence[0][16] == 1:
-            return (8, 6), 2 # East start arm
+            return rotate_point((8, 6)), rotate_dir(2) # East start arm
         else:
-            return (1, 1), 0 # Default start location
+            return DEFAULT_AGENT_START_POS, DEFAULT_AGENT_START_DIR # Default start location
 
     # State and action supporting functions
     def is_agent_on_obj(self, obj):
@@ -2652,21 +2693,13 @@ class CornerMazeEnv(MiniGridEnv):
 
         # Rotate left
         if action == Actions.left:
-        # This condition is to have agent move forward when turning left after exiting a well
-        # this is to model moving to the left or right in a single move after exiting a well
+            #print('cur pos: ', self.agent_pose, 'last pos: ', self.last_pose)
+            # This condition is to have agent move forward weh turning left after exiting a well
+            # this is so model moving to the left or right in a single move after exiting a well
             if self.agent_pos in CORNERS and self.last_pose in WELL_EXIT_POSES:
-                if self.agent_pos == (2,2):
-                    self.agent_pos = (3,2)
-                    self.agent_dir = 0
-                elif self.agent_pos == (10,2):
-                    self.agent_pos = (10,3)
-                    self.agent_dir = 1
-                elif self.agent_pos == (10,10):
-                    self.agent_pos = (9,10)
-                    self.agent_dir = 2
-                elif self.agent_pos == (2,10):
-                    self.agent_pos = (2,9)
-                    self.agent_dir = 3
+                new_pos_dir = CORNER_LEFT_TURN_FIXES.get(self.agent_pos)
+                if new_pos_dir:
+                    self.agent_pos, self.agent_dir = new_pos_dir
                 reward += FORWARD_SCR
             else:
                 self.agent_dir = (self.agent_dir - 1) % 4
@@ -2688,18 +2721,9 @@ class CornerMazeEnv(MiniGridEnv):
             # Move forward
             if self.agent_pose in WELL_EXIT_POSES:
                 # These conditions control well exit behavior
-                if self.agent_pos == (1,1):
-                    self.agent_pos = (2,2)
-                    self.agent_dir = 1
-                elif self.agent_pos == (11,1):
-                    self.agent_pos = (10,2)
-                    self.agent_dir = 2
-                elif self.agent_pos == (11,11):
-                    self.agent_pos = (10,10)
-                    self.agent_dir = 3
-                elif self.agent_pos == (1,11):
-                    self.agent_pos = (2,10)
-                    self.agent_dir = 0
+                new_pos_dir = WELL_EXIT_FORWARD_FIXES.get(self.agent_pos)
+                if new_pos_dir:
+                    self.agent_pos, self.agent_dir = new_pos_dir
                 reward += FORWARD_SCR
             elif self.fwd_cell is None or self.fwd_cell.can_overlap():
                 self.agent_pos = tuple(self.fwd_pos)
@@ -2708,18 +2732,9 @@ class CornerMazeEnv(MiniGridEnv):
                 reward += INAPPROPRIATE_ACTION_SCR # forward movement where it can't happen represents investigation  
         elif action == Actions.pickup:
             # Well entry action (pickup) 
-            if self.agent_pos == (10,2):
-                self.agent_pos = (11,1)
-                self.agent_dir = 0
-            elif self.agent_pos == (10,10):
-                self.agent_pos = (11,11)
-                self.agent_dir = 1
-            elif self.agent_pos == (2,10):
-                self.agent_pos = (1,11)
-                self.agent_dir = 2
-            elif self.agent_pos == (2,2):
-                self.agent_pos = (1,1)
-                self.agent_dir = 3
+            new_pos_dir = WELL_ENTRY_PICKUP_FIXES.get(self.agent_pos)
+            if new_pos_dir:
+                self.agent_pos, self.agent_dir = new_pos_dir
             reward += FORWARD_SCR
     
         # Penalize staying in the same position for more that 2 steps
@@ -2749,35 +2764,23 @@ class CornerMazeEnv(MiniGridEnv):
         # Capture turn one and turn two scores
         goal_locations = self.grid_configuration_sequence[self.sequence_count][21:25]
         if self.grid_configuration_sequence[self.sequence_count][0] == 2: # Maker this check only happens for a trial not iti.
+            ns_goal_active = 1 in (goal_locations[0], goal_locations[2])
+            ew_goal_active = 1 in (goal_locations[1], goal_locations[3])
             if self.turn_score[0] == None:
-                if 1 in [goal_locations[0], goal_locations[2]]:
-                    if self.agent_pos == (6,5):
-                        self.turn_score[0] = 1
-                    elif self.agent_pos == (6,7):
-                        self.turn_score[0] = 0
-                    elif self.agent_pos == (5,6):
-                        self.turn_score[0] = 1
-                    elif self.agent_pos == (7,6):
-                        self.turn_score[0] = 0
-                elif 1 in [goal_locations[1], goal_locations[3]]:
-                    if self.agent_pos == (6,5):
-                        self.turn_score[0] = 0
-                    elif self.agent_pos == (6,7):
-                        self.turn_score[0] = 1
-                    elif self.agent_pos == (5,6):
-                        self.turn_score[0] = 0
-                    elif self.agent_pos == (7,6):
-                        self.turn_score[0] = 1
+                if ns_goal_active and self.agent_pos in TURN_ONE_NS_MAP:
+                    self.turn_score[0] = TURN_ONE_NS_MAP[self.agent_pos]
+                elif ew_goal_active and self.agent_pos in TURN_ONE_EW_MAP:
+                    self.turn_score[0] = TURN_ONE_EW_MAP[self.agent_pos]
             elif self.turn_score[1] == None:
-                if 1 in [goal_locations[0], goal_locations[2]]:
-                    if self.agent_pos in [(7,2), (5,10), (2,7), (10,5)]:
+                if ns_goal_active:
+                    if self.agent_pos in TURN_TWO_SET_A:
                         self.turn_score[1] = 1
-                    elif self.agent_pos in [(5,2), (7,10), (2,5), (10,7)]:
+                    elif self.agent_pos in TURN_TWO_SET_B:
                         self.turn_score[1] = 0
-                elif 1 in [goal_locations[1], goal_locations[3]]:
-                    if self.agent_pos in [(7,2), (5,10), (2,7), (10,5)]:
+                elif ew_goal_active:
+                    if self.agent_pos in TURN_TWO_SET_A:
                         self.turn_score[1] = 0
-                    elif self.agent_pos in [(5,2), (7,10), (2,5), (10,7)]:
+                    elif self.agent_pos in TURN_TWO_SET_B:
                         self.turn_score[1] = 1
 
         # CELL AND TRIGGER CONDITION CHECKS
