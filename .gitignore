@@ -12,6 +12,9 @@ ai-venv/
 CLAUDE.md
 .claude/
 
+# personal experimental code
+dt-build
+
 # Run outputs / model artifacts
 runs/
 model-data/
@@ -26,6 +29,13 @@ data/yoked/*.parquet
 # a redundant data/ tree under notebooks/. The canonical data lives at the
 # repo-root data/.
 notebooks/data/
+
+# Student experiment scratch. Canonical notebooks live at the top of
+# notebooks/; students copy them into notebooks/students/<name>/ and tweak
+# freely. The students/ folder itself + its README/.gitkeep are tracked;
+# per-student subdirs are not. Sharing happens via fork/PR or by promoting
+# a copy into notebooks/contrib/<name>/ (which is NOT gitignored).
+notebooks/students/*/
 
 # Pytest / coverage
 .pytest_cache/

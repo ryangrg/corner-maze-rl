@@ -94,6 +94,21 @@ from corner_maze_rl import ...
 ```
 If you need cloud + the interactive UI, point VS Code at a remote Jupyter kernel (e.g. GitHub Codespaces or a managed runtime) — the IDE renders widgets locally even when compute is remote.
 
+## Student workspace
+
+Canonical notebooks (`notebooks/01_*`, `02_*`, `03_*`, ...) are the reference implementations and stay clean. For your own tweaks, copy a notebook into `notebooks/students/<your-name>/` and modify freely:
+
+```bash
+mkdir -p notebooks/students/alice
+cp notebooks/03_ppo_experiments.ipynb notebooks/students/alice/03_ppo_lr_sweep.ipynb
+```
+
+`notebooks/students/<name>/` is gitignored — your scratch work never collides on `git pull`, and the canonical notebook stays a stable reference. Run outputs go to `runs/` (also gitignored), so different students' runs don't conflict either.
+
+**Sharing results.** When you want feedback on a notebook, either (a) commit a copy into `notebooks/contrib/<your-name>/` (not gitignored) and open a PR, or (b) work on a fork. The split keeps "private scratch" and "ready for review" distinct.
+
+A good first run: open [notebooks/03_ppo_experiments.ipynb](notebooks/03_ppo_experiments.ipynb), keep the smoke-run defaults (`N_SEEDS=2, NUM_EPISODES=10`), and execute top-to-bottom. The §7 recipes table shows how to scale up.
+
 ## Repository layout
 
 ```

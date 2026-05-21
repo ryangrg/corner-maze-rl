@@ -41,10 +41,11 @@ corner-maze-rl/
 ├── notebooks/                           # VS Code / local Jupyter — NOT Colab-in-browser
 │   ├── 01_explore_env.ipynb             # env walkthrough, manual control
 │   ├── 02_explore_yoked_data.ipynb      # load dataset, plot trajectories
-│   ├── 03_train_dt.ipynb                # DT train + eval
-│   ├── 04_train_ppo.ipynb               # PPO baseline
+│   ├── 03_ppo_experiments.ipynb         # PPO baseline (sweepable encoder presets, N seeds)
+│   ├── 04_train_dt.ipynb                # DT train + eval (+ 05–09 DT architecture variants)
 │   ├── 05_train_sr.ipynb                # SR baseline
-│   └── 06_compare_models.ipynb          # IQM, performance profiles, drawdown
+│   ├── 06_compare_models.ipynb          # IQM, performance profiles, drawdown (across PPO/DT/SR runs)
+│   └── students/                        # gitignored per-student copies — see README §Student workspace
 ├── src/corner_maze_rl/
 │   ├── env/                             # trimmed env + constants + trial_seq
 │   ├── data/

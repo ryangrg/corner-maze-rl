@@ -12,8 +12,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import platform
 import random
 import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -115,6 +117,52 @@ def hash_dataset(paths: Iterable[str | os.PathLike[str]]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Run-environment capture (deps + hardware)
+# ---------------------------------------------------------------------------
+
+def capture_pip_freeze() -> list[str] | None:
+    """Return `pip freeze` output as a list of `pkg==ver` strings, or None.
+
+    Captures the full installed-package set for the active interpreter so a
+    run can be reproduced bit-for-bit. ~200 lines on a typical env.
+    """
+    try:
+        out = subprocess.run(
+            [sys.executable, "-m", "pip", "freeze"],
+            capture_output=True, text=True, check=True, timeout=15,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return None
+    return [line for line in out.stdout.splitlines() if line.strip()]
+
+
+def capture_environment() -> dict[str, Any]:
+    """Snapshot the runtime environment for reproducibility.
+
+    Returns a dict with python version, OS/arch, torch + CUDA info if
+    available, and `pip freeze`. Safe to call without torch installed.
+    """
+    env: dict[str, Any] = {
+        "python_version": sys.version.split()[0],
+        "platform":       platform.platform(),
+        "machine":        platform.machine(),
+        "processor":      platform.processor() or None,
+    }
+    try:
+        import torch
+        env["torch_version"] = torch.__version__
+        env["cuda_available"] = bool(torch.cuda.is_available())
+        env["cuda_device_count"] = int(torch.cuda.device_count())
+        if torch.cuda.is_available():
+            env["cuda_device_name"] = torch.cuda.get_device_name(0)
+        env["mps_available"] = bool(getattr(torch.backends, "mps", None) and torch.backends.mps.is_available())
+    except Exception:
+        pass
+    env["pip_freeze"] = capture_pip_freeze()
+    return env
+
+
+# ---------------------------------------------------------------------------
 # Run config persistence
 # ---------------------------------------------------------------------------
 
@@ -126,6 +174,7 @@ def save_run_config(
     extra: dict[str, Any] | None = None,
     dataset_paths: Iterable[str | os.PathLike[str]] | None = None,
     repo_dir: str | os.PathLike[str] | None = None,
+    capture_env: bool = True,
     filename: str = "run_config.json",
 ) -> str:
     """Write a JSON run config to *save_dir*/*filename*.
@@ -135,7 +184,8 @@ def save_run_config(
 
     Optional: ``hyperparams`` (model + training settings), ``extra`` (catch-all
     for run-specific keys), ``dataset_hash`` (auto-computed from
-    ``dataset_paths`` if provided and ``extra`` doesn't already supply one).
+    ``dataset_paths`` if provided and ``extra`` doesn't already supply one),
+    ``environment`` (deps + hardware snapshot; toggle with ``capture_env``).
 
     The directory is created if it doesn't exist. Returns the path written.
     """
@@ -153,6 +203,8 @@ def save_run_config(
         config["hyperparams"] = hyperparams
     if dataset_paths is not None and (extra is None or "dataset_hash" not in extra):
         config["dataset_hash"] = hash_dataset(dataset_paths)
+    if capture_env:
+        config["environment"] = capture_environment()
     if extra is not None:
         config.update(extra)
 
