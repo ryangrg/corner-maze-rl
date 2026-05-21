@@ -30,7 +30,7 @@ The yoked dataset lives at `data/yoked/dataset/` (gitignored; populated via `scr
 
 <sup>*4 of the 121 PI sessions are tagged `Fixed Cue 1` rather than `Dark Train` — a per-subject experimental detour, not a separate paradigm.</sup>
 
-The dataset ships three action tables (one row per env step, schema `session_id, step, action, grid_x, grid_y, direction, rewarded`):
+The dataset ships three action tables (one row per env step, schema `session_id, step, action, grid_x, grid_y, direction, rewarded, actions_to_reward, pose_label`). `pose_label` (`layout_class_x_y_dir`, e.g. `trl_e_s_xx_8_2_0`) joins to [data/dataframes/minigrid-views-allposes.parquet](data/dataframes/minigrid-views-allposes.parquet) to fetch the pre-rendered 21×21×3 RGB view for that step without re-rendering through MiniGrid:
 
 - `actions_synthetic_pretrial.parquet` — Acquisition only, synthetic pretrial (the primary input to training; 422 sessions, ~768 K rows)
 - `actions_real_pretrial.parquet` — Acquisition only, real pretrial (alt variant for ablations; 236 sessions, ~612 K rows)

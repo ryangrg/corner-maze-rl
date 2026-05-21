@@ -734,6 +734,10 @@ class CornerMazeEnv(MiniGridEnv):
 
         return f'{prefix}_{x}_{y}_{d}'
 
+    def get_pose_label(self) -> str:
+        """Public accessor for the current pose label (layout_class_x_y_dir)."""
+        return self._get_pose_label()
+
     def _build_observation(self) -> dict:
         """Build the observation dict based on the current obs_mode."""
         if self.obs_mode == "view":

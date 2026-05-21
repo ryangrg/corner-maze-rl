@@ -190,7 +190,7 @@ def main():
 
     # ── Concat + sort actions per bucket ────────────────────────
     action_cols = ['session_id', 'step', 'action', 'grid_x', 'grid_y',
-                   'direction', 'rewarded', 'actions_to_reward']
+                   'direction', 'rewarded', 'actions_to_reward', 'pose_label']
     output_actions = {}
     for bucket, parts in buckets.items():
         if not parts:

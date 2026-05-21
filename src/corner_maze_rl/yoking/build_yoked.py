@@ -19,6 +19,7 @@ import time
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+from .compute_pose_labels import compute_pose_labels
 from .data_loader import (
     get_coordinates,
     get_exposure_rewards,
@@ -44,6 +45,7 @@ def process_session(
     session_type: str,
     session_phase: str,
     cue_goal_orientation: str,
+    training_group: str,
     output_dir: str,
     seed: int = 42,
     build_pause: bool = True,
@@ -269,6 +271,21 @@ def process_session(
         n_rewards = int(actions_df['rewarded'].sum())
         trial_configs = trial_configs[:n_rewards]
 
+    # 3. Replay through CornerMazeEnv to attach a per-row pose_label
+    # (layout_class_x_y_dir). Pose at row i = env state BEFORE action i,
+    # matching the divergence-checker convention. Joins to
+    # data/dataframes/minigrid-views-allposes.parquet for view lookups.
+    actions_df = actions_df.copy()
+    actions_df['pose_label'] = compute_pose_labels(
+        actions_df,
+        session_phase=session_phase,
+        session_number=session_number,
+        session_type=session_type,
+        cue_goal_orientation=cue_goal_orientation,
+        training_group=training_group,
+        trial_configs=trial_configs if trial_configs else None,
+    )
+
     # 4. Save to parquet with metadata
     # Filename distinguishes pretrial variant for acquisition (synthetic vs real);
     # exposure has no pretrial concept so the suffix is omitted there.
@@ -400,6 +417,7 @@ def main():
                 session_type=row['session_type'],
                 session_phase=row['session_phase'],
                 cue_goal_orientation=row['cue_goal_orientation'],
+                training_group=row['training_group'],
                 output_dir=args.output_dir,
                 seed=args.seed,
                 build_pause=args.pause,
