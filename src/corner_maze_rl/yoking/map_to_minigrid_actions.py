@@ -317,6 +317,75 @@ def _reachable_from(anchor, blocked):
     return reachable
 
 
+def _remap_to_reachable_one_pass(grid_x, grid_y, blocked, anchor):
+    """Combined barrier + isolated-pocket remap that uses reachability and
+    last-known-side tiebreaking.
+
+    Per-frame: if (gx, gy) is in the reachable set from `anchor` under
+    `blocked`, keep it and update last_reachable. Otherwise remap to the
+    nearest reachable cell, breaking distance ties by minimum distance to
+    `last_reachable` (the cell the rat was at on the previous reachable
+    frame). This keeps rearings-on-barrier (which the tracker briefly
+    maps to the opposite-side isolated pocket) on the rat's actual side
+    rather than letting BFS-bridging carry the agent the long way
+    around through the opposite half of the maze.
+
+    Replaces the older `_remap_blocked_to_neighbor` +
+    `_remap_unreachable_to_reachable` two-stage pipeline for trial-phase
+    and ITI processing. Modifies arrays in-place. Skips well positions.
+    """
+    if anchor is None:
+        return
+    reachable = _reachable_from(anchor, blocked)
+    if not reachable:
+        return
+    candidates = sorted(reachable - WELL_POSITIONS)
+    if not candidates:
+        return
+    n = len(grid_x)
+
+    # Initialize last_reachable by looking ahead for the first frame that
+    # IS reachable. The anchor (pretrial-end position) is often equidistant
+    # from both sides of a center barrier, which leaves the tiebreak
+    # degenerate for any unreachable frames that occur BEFORE the rat first
+    # touches a reachable cell. Look-ahead picks the rat's *actual* side
+    # for the initial frames too.
+    last_reachable = anchor
+    for i in range(n):
+        pos = (int(grid_x[i]), int(grid_y[i]))
+        if pos in reachable:
+            last_reachable = pos
+            break
+
+    for i in range(n):
+        pos = (int(grid_x[i]), int(grid_y[i]))
+        if pos in WELL_POSITIONS:
+            continue
+        if pos in reachable:
+            last_reachable = pos
+            continue
+        # Snap unreachable position to last_reachable. The unreachable
+        # cell is never a real rat position — it's a tracker phantom
+        # from rearing on a barrier — so "geometric proximity to the
+        # phantom" isn't meaningful. The rat is by definition still
+        # near where they last were on a reachable frame, and
+        # last_reachable is itself a candidate (d_side=0 wins), so this
+        # is equivalent to "stay put while rearing." This collapses
+        # opposite-pocket cases (e.g. (6,10) in trl_n_*_xx, (2,6) in
+        # trl_e_n_xx) without needing BFS to bridge through the wrong
+        # half of the maze.
+        best = None
+        best_side_d = float('inf')
+        for c in candidates:
+            d_side = abs(c[0] - last_reachable[0]) + abs(c[1] - last_reachable[1])
+            if d_side < best_side_d:
+                best = c
+                best_side_d = d_side
+        if best is not None:
+            grid_x[i] = best[0]
+            grid_y[i] = best[1]
+
+
 def _remap_unreachable_to_reachable(grid_x, grid_y, blocked, anchor):
     """Remap frames mapped to barrier-isolated pockets back to reachable cells.
 
@@ -325,6 +394,19 @@ def _remap_unreachable_to_reachable(grid_x, grid_y, blocked, anchor):
     set. Catches frames that landed on technically-walkable cells which are
     cut off by active barriers (e.g. (10,6) in `trl_w_s_sw` where (10,5) and
     (10,7) are barriers).
+
+    Critical detail — the unreachable cell is picked to minimize distance
+    from the LAST REACHABLE POSITION the rat was at, not from the
+    unreachable cell itself. Reason: when the rat rears on a barrier
+    (e.g. (2,7) in trl_e_n_xx), the tracker can briefly map to the
+    isolated middle pocket at (2,6). The naive nearest-to-pos remap
+    would tie-break lexicographically between equidistant cells on
+    opposite sides of the barrier — picking (2,4) in the north segment
+    when the rat was actually at (2,8) on the south side, then BFS
+    bridges through long corridor detours that the rat never walked.
+    Anchoring the remap to last_reachable collapses these rearings into
+    "stay on the rat's actual side" — equivalent to a forward-into-
+    barrier (agent doesn't move), matching reality.
 
     Modifies arrays in-place. Skips well positions.
     """
@@ -337,14 +419,17 @@ def _remap_unreachable_to_reachable(grid_x, grid_y, blocked, anchor):
     if not candidates:
         return
     n = len(grid_x)
+    last_reachable = anchor
     for i in range(n):
         pos = (int(grid_x[i]), int(grid_y[i]))
         if pos in reachable or pos in WELL_POSITIONS:
+            if pos in reachable:
+                last_reachable = pos
             continue
         best = None
         best_dist = float('inf')
         for c in candidates:
-            d = abs(c[0] - pos[0]) + abs(c[1] - pos[1])
+            d = abs(c[0] - last_reachable[0]) + abs(c[1] - last_reachable[1])
             if d < best_dist:
                 best_dist = d
                 best = c
@@ -569,6 +654,26 @@ def generate_real_pretrial_actions(pretrial_df, arm, rng,
                                         consolidate_pauses)):
                 output.append((ACT_PAUSE, current_pos[0], current_pos[1],
                                current_dir, 0))
+
+    # Bridge to the env's pretrial trigger if the rat's coord-derived path
+    # didn't naturally end at it. The env's pretrial→trial transition fires
+    # only when the agent is on the trigger cell AND pretrial_step_count
+    # has reached PRETRIAL_MIN_STEPS. Some rats drive through the trigger
+    # cell too early (before the count is satisfied) and then wander to
+    # the arm interior, leaving the env stuck in pretrial layout. Without
+    # this bridge, subsequent trial-phase actions collide with pretrial
+    # barriers (e.g. the center wall at (6,7) for South-arm pretrial that
+    # only lifts after the transition). The bridge appends a few F/L/R
+    # actions to walk the agent back to the trigger, plus PAUSE-padding
+    # if the MIN_STEPS gate isn't yet satisfied.
+    if current_pos != trigger_pos:
+        bridge_steps, current_pos, current_dir = _walk_to(
+            trigger_pos, current_pos, current_dir
+        )
+        output.extend(bridge_steps)
+    while len(output) < PRETRIAL_MIN_STEPS:
+        output.append((ACT_PAUSE, current_pos[0], current_pos[1],
+                       current_dir, 0))
 
     return output, current_pos, current_dir
 
@@ -961,13 +1066,35 @@ _WELL_EXIT_LEFT = {
 }
 
 
+def _find_registered_visit(trial_well_visits, well_pos, t_start, t_end, tol_ms=200.0):
+    """Look up an upstream-registered visit overlapping the given run window.
+
+    `trial_well_visits` is the per-trial subset of get_trial_well_visits output
+    (errors + rewards that MazeControl logged within this trial's phase). A
+    coord-derived well-visit run is "registered" iff one of these visits is
+    at the same well and its [t_entry_ms, t_exit_ms] window overlaps the
+    run's [t_start, t_end] window within `tol_ms` slack.
+
+    Returns the matching visit dict (with `is_reward` key) or None.
+    """
+    if not trial_well_visits:
+        return None
+    for v in trial_well_visits:
+        if v['well_grid_pos'] != well_pos:
+            continue
+        if v['t_entry_ms'] <= t_end + tol_ms and v['t_exit_ms'] >= t_start - tol_ms:
+            return v
+    return None
+
+
 def _generate_segment_actions(runs, timestamps, current_pos, current_dir,
                               rng, build_pause, pause_threshold_ms,
                               reward_events=None, stop_at_well=False,
                               trial_rewarded=True, last_trial=False,
                               blocked=None, goal_well=None,
                               after_well_exit=False, stop_at_pos=None,
-                              consolidate_pauses=True):
+                              consolidate_pauses=True,
+                              trial_well_visits=None):
     """Generate navigation actions for a trial or ITI segment.
 
     Processes consolidated grid runs and produces turn/forward/pause actions.
@@ -1041,13 +1168,46 @@ def _generate_segment_actions(runs, timestamps, current_pos, current_dir,
         pos = (gx, gy)
 
         # Well visit: emit visit block when the rat actually enters the well
-        # (next run is at the well position). If goal well, stop.
-        # If wrong well (error), emit the visit and continue.
-        if (stop_at_well and pos in CORNER_TO_WELL and ri + 1 < len(runs)
+        # (next run is at the well position). Gating depends on caller:
+        #   - stop_at_well=True (trial-phase): gate on trial_well_visits
+        #     (MazeControl-logged visits) so the action stream matches the
+        #     experimental record and the env's trial counter doesn't
+        #     over-count goal-well entries.
+        #   - stop_at_well=False (ITI): apply our own 250 ms dwell threshold.
+        #     ITI well visits are real rat behavior (quick reward-checks);
+        #     filter sub-threshold tracking flicker, emit the rest. Env
+        #     doesn't fire trial transitions on these because ITI layouts
+        #     have no goal-marked wells (rewarded=0 throughout).
+        if (pos in CORNER_TO_WELL and ri + 1 < len(runs)
                 and (runs[ri + 1][0], runs[ri + 1][1]) == CORNER_TO_WELL[pos]):
             well_pos = CORNER_TO_WELL[pos]
             is_goal = (goal_well is None or well_pos == goal_well)
-            is_rewarded = trial_rewarded and is_goal
+            well_run = runs[ri + 1]
+            w_start = float(timestamps[well_run[2]])
+            w_end = float(timestamps[min(well_run[3] - 1, len(timestamps) - 1)])
+
+            if stop_at_well:
+                # Trial-phase path
+                if trial_well_visits is not None:
+                    matched = _find_registered_visit(
+                        trial_well_visits, well_pos, w_start, w_end
+                    )
+                    if matched is None:
+                        ri += 2
+                        continue
+                    is_rewarded = bool(matched['is_reward'])
+                else:
+                    is_rewarded = trial_rewarded and is_goal
+            else:
+                # ITI path: dwell-threshold gate (matches MazeControl's
+                # reward-dwell criterion). Sub-threshold dips are tracking
+                # flicker / inertia, not deliberate well checks.
+                ITI_WELL_DWELL_MS = 250
+                if (w_end - w_start) < ITI_WELL_DWELL_MS:
+                    ri += 2
+                    continue
+                # ITI well visits never count toward trial reward.
+                is_rewarded = False
 
             if last_trial and is_goal:
                 # Final trial, correct well: just PICKUP (env terminates)
@@ -1072,12 +1232,16 @@ def _generate_segment_actions(runs, timestamps, current_pos, current_dir,
                     elif act == ACT_RIGHT:
                         current_dir = (current_dir + 1) % 4
 
-            if is_goal:
+            # Stop the segment only on a trial-phase goal-well visit.
+            # ITI calls pass stop_at_well=False (and goal_well=None, which
+            # would otherwise make is_goal=True trivially); treat ITI
+            # visits as transient checks and keep navigating.
+            if stop_at_well and is_goal:
                 well_rewarded = is_rewarded
                 break  # stop at goal well
             else:
-                # Wrong well — continue navigating from well-exit state.
-                # Skip past the well run (ri+1 was the well, ri+2 is after)
+                # Wrong well (trial) or ITI check — continue navigating
+                # from well-exit state. Skip past the well run.
                 at_well_exit = True
                 ri += 2
                 continue
@@ -1220,6 +1384,7 @@ def generate_acquisition_actions(
     iti_sim_configs: list | None = None,
     use_real_pretrial: bool = False,
     consolidate_pauses: bool = True,
+    registered_well_visits: list | None = None,
 ) -> list:
     """Generate actions for an acquisition session using phase-joined coordinates.
 
@@ -1245,7 +1410,9 @@ def generate_acquisition_actions(
     trial_numbers = sorted(phase_grid_df['trial_number'].unique())
 
     # Build per-trial reward lookup: check if any reward event falls
-    # within each trial's time range
+    # within each trial's time range. Used only as a legacy fallback
+    # when registered_well_visits is None; the gated path uses the
+    # per-visit is_reward flag instead.
     trial_rewarded_map = {}
     for trial_num in trial_numbers:
         trial_df = phase_grid_df[
@@ -1260,6 +1427,13 @@ def generate_acquisition_actions(
             )
         else:
             trial_rewarded_map[trial_num] = False
+
+    # Bucket upstream-registered well visits by trial_number so each trial
+    # segment only sees its own visits during the gating overlap check.
+    trial_visits_map: dict[int, list[dict]] = {}
+    if registered_well_visits is not None:
+        for v in registered_well_visits:
+            trial_visits_map.setdefault(v['trial_number'], []).append(v)
 
     for trial_idx, trial_num in enumerate(trial_numbers):
         if trial_idx >= len(trial_configs):
@@ -1336,8 +1510,7 @@ def generate_acquisition_actions(
                     barriers = trial_barrier_sets[trial_idx]
                     gx_arr = trial_df['grid_x'].values.copy()
                     gy_arr = trial_df['grid_y'].values.copy()
-                    _remap_blocked_to_neighbor(gx_arr, gy_arr, barriers)
-                    _remap_unreachable_to_reachable(gx_arr, gy_arr, barriers, current_pos)
+                    _remap_to_reachable_one_pass(gx_arr, gy_arr, barriers, current_pos)
                     trial_df = trial_df.copy()
                     trial_df['grid_x'] = gx_arr
                     trial_df['grid_y'] = gy_arr
@@ -1415,6 +1588,7 @@ def generate_acquisition_actions(
                         blocked=trial_blocked,
                         goal_well=_GOAL_TO_WELL.get(goal_idx),
                         consolidate_pauses=consolidate_pauses,
+                        trial_well_visits=trial_visits_map.get(trial_num) if registered_well_visits is not None else None,
                     )
                     output.extend(seg_out)
                     trial_reached_goal = well_result is not None
@@ -1466,8 +1640,7 @@ def generate_acquisition_actions(
                 elif iti_barrier_sets and trial_idx < len(iti_barrier_sets):
                     iti_barriers = iti_barrier_sets[trial_idx]
                     if iti_barriers:
-                        _remap_blocked_to_neighbor(gx_arr, gy_arr, iti_barriers)
-                        _remap_unreachable_to_reachable(gx_arr, gy_arr, iti_barriers, current_pos)
+                        _remap_to_reachable_one_pass(gx_arr, gy_arr, iti_barriers, current_pos)
                 if used_per_frame or (iti_barrier_sets and trial_idx < len(iti_barrier_sets)
                                       and iti_barrier_sets[trial_idx]):
                     iti_df = iti_df.copy()
@@ -1506,6 +1679,15 @@ def generate_acquisition_actions(
                     if (goal_well_pos and runs
                             and (runs[0][0], runs[0][1]) == goal_well_pos):
                         goal_corner = WELL_TO_CORNER.get(goal_well_pos)
+                        # No gating here: the trial-continuation-in-ITI path
+                        # handles miss trials where upstream's trial phase
+                        # ended before the rat reached the goal but the rat
+                        # later reached it during the ITI window (all 40 such
+                        # cases in the in-scope dataset have substantial
+                        # ITI-window goal-well dwell — see investigation log).
+                        # Upstream's trial_well_visits is structurally blind
+                        # to ITI-window visits, so gating against it would
+                        # incorrectly suppress these legitimate completions.
                         is_rewarded = trial_rewarded_map.get(trial_num, False)
                         if goal_corner and current_pos != goal_corner:
                             path = find_path(current_pos, goal_corner, blocked=trial_blocked)
@@ -1568,6 +1750,12 @@ def generate_acquisition_actions(
                                                current_dir, 0))
                                 current_pos = path[step_i + 1]
 
+                    # No trial_well_visits here: this is the ITI-fallback
+                    # path (upstream's trial-phase boundary closed before
+                    # the rat reached the goal, but the rat completed the
+                    # trial within the ITI window). trial_well_visits is
+                    # blind to ITI-window events, so emit per coord-derived
+                    # runs and let the env's goal-well detection do its job.
                     seg_out, current_pos, current_dir, well_result, consumed_ri = _generate_segment_actions(
                         runs, timestamps, current_pos, current_dir, rng,
                         build_pause, pause_threshold_ms,
@@ -1583,16 +1771,35 @@ def generate_acquisition_actions(
                     # only processes the remaining post-goal-well runs.
                     runs = runs[consumed_ri:]
 
-                # Remove well-position runs from ITI (tracking artifacts).
+                # Drop *leading* well-position runs (the rat lingering at
+                # the trial-end goal well at the very start of ITI before
+                # exiting). The trial-end well_visit_actions block already
+                # exited the agent to the corner; those lingering frames
+                # would re-trigger emission and conflict with the corner-
+                # trick / bridge logic below. *Mid-ITI* well-position runs
+                # are kept — they're genuine quick-check visits at corners,
+                # which the segment generator emits as PICKUP+exit blocks
+                # (with a 250 ms dwell gate). Env doesn't fire trial
+                # transitions on these (ITI layouts have no rewarded
+                # wells), so they're cosmetic for env state but match
+                # real rat behavior in the action stream.
                 # Remap trial barrier overshoots to nearest walkable neighbor
                 # when the trial didn't reach the goal (env still has trial barriers).
                 barrier_filter = set()
                 if not trial_reached_goal and trial_barrier_sets:
                     barrier_filter = trial_barrier_sets[trial_idx]
                 remapped = []
+                seen_non_well = False
                 for gx, gy, s, e in runs:
                     if (gx, gy) in WELL_POSITIONS:
-                        continue  # still remove well artifacts
+                        if not seen_non_well:
+                            # Leading well — rat hadn't left the goal well
+                            # yet. Drop.
+                            continue
+                        # Mid-ITI well: keep for emission.
+                        remapped.append((gx, gy, s, e))
+                        continue
+                    seen_non_well = True
                     if (gx, gy) in barrier_filter:
                         # Remap to nearest walkable non-blocked neighbor
                         best = None
@@ -2038,6 +2245,7 @@ def build_action_sequence(
     session_number: str | None = None,
     use_real_pretrial: bool = False,
     consolidate_pauses: bool = True,
+    registered_well_visits: list | None = None,
 ) -> pd.DataFrame:
     """Convert a grid-mapped coordinate DataFrame to an action sequence.
 
@@ -2113,6 +2321,7 @@ def build_action_sequence(
             iti_sim_configs=iti_sim_configs,
             use_real_pretrial=use_real_pretrial,
             consolidate_pauses=consolidate_pauses,
+            registered_well_visits=registered_well_visits,
         )
     elif session_number == '2e' and reward_events:
         # Exposure B: stochastic turns+pauses for timed phases,

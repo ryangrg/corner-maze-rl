@@ -28,6 +28,7 @@ from .data_loader import (
     get_trial_boundaries,
     get_trial_configs,
     get_trial_rewards,
+    get_trial_well_visits,
 )
 from .map_to_minigrid import map_session_to_grid
 from .map_to_minigrid_actions import build_action_sequence
@@ -62,6 +63,8 @@ def process_session(
     # 1. Get coordinates and map to grid
     is_exposure = session_phase == 'Exposure'
     timed_phase_end = []
+    # Exposure has no trial_well_visits; acquisition branch populates this.
+    registered_well_visits = None
 
     if is_exposure:
         coord_df = get_coordinates(session_id)
@@ -235,6 +238,11 @@ def process_session(
 
         grid_df = map_session_to_grid(phase_coord_df)
         reward_events = get_trial_rewards(session_id)
+        # MazeControl-logged well visits per trial: PICKUP emission in
+        # map_to_minigrid_actions gates on overlap with this list so the
+        # action stream matches upstream's reward-detection record (no
+        # sub-threshold drive-throughs masquerading as visits).
+        registered_well_visits = get_trial_well_visits(session_id)
         trial_configs = get_trial_configs(session_id, session_phase)
 
         # Trim trial_configs to match: skip trials that were trimmed away
@@ -259,6 +267,7 @@ def process_session(
         session_number=session_number,
         use_real_pretrial=use_real_pretrial,
         consolidate_pauses=consolidate_pauses,
+        registered_well_visits=registered_well_visits,
     )
 
     if len(actions_df) == 0:

@@ -152,8 +152,14 @@ def compute_pose_labels(
             poses.append(env.get_pose_label())
             _, _, terminated, truncated, _ = env.step(int(actions[i]))
             if (terminated or truncated) and i < n - 1:
+                # With registered-visit gating in the yoking pipeline,
+                # env trial_count tracks len(trial_configs) exactly, so
+                # this branch should not fire. If it does, the yoked
+                # stream has more goal-well entries than configured trials
+                # — likely an alignment mistake worth surfacing loudly.
                 raise RuntimeError(
-                    f'env terminated early on {label} at step {i}/{n}'
+                    f'env terminated early on {label} at step {i}/{n}: '
+                    'gated build should keep env trial_count == n_trials'
                 )
         return poses
     finally:

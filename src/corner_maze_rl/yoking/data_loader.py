@@ -63,7 +63,7 @@ def get_sessions(
     if session_number is not None:
         conditions.append(f"ses.session_number = '{session_number}'")
     if session_phase is not None:
-        conditions.append(f"ses.session_phase = '{session_phase}'")
+        conditions.append(f"ses.session_experiment_phase = '{session_phase}'")
 
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ''
 
@@ -74,7 +74,7 @@ def get_sessions(
             sub.name AS subject_name,
             ses.session_number,
             ses.session_type,
-            ses.session_phase,
+            ses.session_experiment_phase AS session_phase,
             sub.cue_goal_orientation,
             sub.training_group
         FROM '{_parquet("sessions")}' ses
@@ -200,6 +200,43 @@ def get_trial_rewards(session_id: int) -> list[tuple[float, tuple[int, int]]]:
         if well_pos is not None:
             rewards.append((float(row['t_entry_ms']), well_pos))
     return rewards
+
+
+def get_trial_well_visits(session_id: int) -> list[dict]:
+    """Get every registered well visit (errors + rewards) for a session.
+
+    Source of truth is upstream ``trial_well_visits.parquet``, which
+    post-hoc reconstructs MazeControl's live reward-detection logic
+    (error: dwell ≥10 ms + 2 s debounce; reward: dwell ≥250 ms within
+    the trial phase window). Each row corresponds to one registered
+    visit — sub-threshold drive-throughs are excluded.
+
+    Returns a list of dicts with keys ``trial_number``, ``t_entry_ms``,
+    ``t_exit_ms``, ``well_grid_pos``, ``is_reward``, ordered by
+    ``t_entry_ms``. Used by the yoking pipeline to gate PICKUP emission
+    so the action stream matches what MazeControl actually logged.
+    """
+    query = f"""
+        SELECT t.trial_number, v.t_entry_ms, v.t_exit_ms, v.well_zone, v.is_reward
+        FROM '{_parquet("trial_well_visits")}' v
+        JOIN '{_parquet("trials")}' t ON v.trial_id = t.trial_id
+        WHERE v.session_id = {session_id}
+        ORDER BY v.t_entry_ms
+    """
+    df = duckdb.sql(query).fetchdf()
+    visits = []
+    for _, row in df.iterrows():
+        well_pos = _ZONE_TO_WELL_POS.get(int(row['well_zone']))
+        if well_pos is None:
+            continue
+        visits.append({
+            'trial_number': int(row['trial_number']),
+            't_entry_ms': float(row['t_entry_ms']),
+            't_exit_ms': float(row['t_exit_ms']),
+            'well_grid_pos': well_pos,
+            'is_reward': bool(row['is_reward']),
+        })
+    return visits
 
 
 def get_phase_coordinates(session_id: int) -> pd.DataFrame:

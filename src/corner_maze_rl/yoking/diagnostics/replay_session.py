@@ -185,6 +185,24 @@ class ReplayController:
             self.terminated = True
         return True
 
+    def seek_to_step(self, target_step):
+        """Reset to step -1 and replay forward to (but not including)
+        ``target_step``. After the call, ``current_step == target_step - 1``
+        and the agent state matches what it would be just before executing
+        action ``target_step``. Passing 0 (or negative) returns to step -1.
+        """
+        self._reset_env()
+        self.current_step = -1
+        if target_step <= 0:
+            return
+        for _ in range(target_step):
+            self.current_step += 1
+            action = int(self.actions[self.current_step])
+            _, _, terminated, truncated, _ = self.env.step(action)
+            if terminated or truncated:
+                self.terminated = True
+                break
+
     def step_backward(self):
         """Go back one step by replaying from scratch."""
         if self.current_step <= 0:
@@ -319,11 +337,17 @@ def main():
     content_w = grid_w + (gap + eye_size + gap + eye_size if has_eyes else 0)
     padding = int(grid_w * 0.03)
     font_size = 16
-    info_h = int(font_size * 1.8) * 3  # 3 rows of info text
     btn_h = 36
     btn_w = 60
+    btn_restart_w = 80  # wider to fit "Restart" label
     btn_gap = 12
     btn_bar_h = btn_h + 16
+
+    # Info-text panel: dynamic height — we wrap lines that overflow the
+    # available content width, so reserve room for up to 6 visual lines.
+    line_h = int(font_size * 1.8)
+    max_info_lines = 6
+    info_h = line_h * max_info_lines
 
     window_w = content_w + padding * 2
     window_h = grid_h + info_h + btn_bar_h + padding * 2
@@ -333,25 +357,40 @@ def main():
     clock = pygame.time.Clock()
     font = pygame.freetype.SysFont(pygame.font.get_default_font(), font_size)
 
-    # Button positions (centered under grid)
-    btn_total_w = btn_w * 3 + btn_gap * 2
+    # Button positions (centered under grid): Restart  <  Play/Pause  >
+    btn_total_w = btn_restart_w + btn_gap + btn_w * 3 + btn_gap * 2
     btn_x_start = padding + (content_w - btn_total_w) // 2
     btn_y = padding + grid_h + info_h + 8
 
-    btn_back = pygame.Rect(btn_x_start, btn_y, btn_w, btn_h)
-    btn_play = pygame.Rect(btn_x_start + btn_w + btn_gap, btn_y, btn_w, btn_h)
-    btn_fwd = pygame.Rect(btn_x_start + 2 * (btn_w + btn_gap), btn_y, btn_w, btn_h)
+    btn_restart = pygame.Rect(btn_x_start, btn_y, btn_restart_w, btn_h)
+    btn_back = pygame.Rect(
+        btn_x_start + btn_restart_w + btn_gap, btn_y, btn_w, btn_h
+    )
+    btn_play = pygame.Rect(
+        btn_x_start + btn_restart_w + btn_gap + btn_w + btn_gap, btn_y, btn_w, btn_h
+    )
+    btn_fwd = pygame.Rect(
+        btn_x_start + btn_restart_w + btn_gap + 2 * (btn_w + btn_gap), btn_y, btn_w, btn_h
+    )
 
-    # Compute yoked phase labels from action patterns + trial configs.
-    # Each trial cycle: pretrial (synthetic F,TT,F,F,TT = 7 actions)
-    # → trial (until PICKUP with rewarded=1) → ITI (until next pretrial).
+    # Compute yoked phase labels + per-step trial number from action
+    # patterns + trial configs. Each trial cycle: pretrial (synthetic
+    # F,TT,F,F,TT = 7 actions) → trial (until PICKUP with rewarded=1)
+    # → ITI (until next pretrial). The displayed trial number is the
+    # trial currently in progress (PRE/TRIAL) or just completed (ITI).
     yoked_phases = []
+    yoked_trial_nums = []  # 1-indexed; 0 if not in a trial (exposure)
+    n_trials_total = len(trial_configs) if trial_configs else 0
     if trial_configs:
         tc_idx = 0
         phase_label = 'PRE'
         pretrial_steps_left = 7
         for si in range(len(actions_df)):
             yoked_phases.append(phase_label)
+            # Trial currently being worked on (PRE/TRIAL: tc_idx+1) or
+            # just completed (ITI: tc_idx).
+            current_trial = tc_idx + 1 if phase_label in ('PRE', 'TRIAL') else tc_idx
+            yoked_trial_nums.append(current_trial)
             act_val = int(actions_df['action'].iloc[si])
             rwd_val = int(actions_df['rewarded'].iloc[si])
 
@@ -382,6 +421,7 @@ def main():
                         pretrial_steps_left = 6  # already consumed 1
     else:
         yoked_phases = ['EXP'] * len(actions_df)
+        yoked_trial_nums = [0] * len(actions_df)
 
     # State
     playing = False
@@ -402,6 +442,35 @@ def main():
         tx = rect.centerx - text_rect.width // 2
         ty = rect.centery - text_rect.height // 2
         font.render_to(screen, (tx, ty), label, size=font_size, fgcolor=text_color)
+
+    def wrap_to_width(text, max_px):
+        """Wrap a single string into multiple lines at whitespace so each
+        rendered line fits within ``max_px`` pixels. Returns a list of
+        substrings. Preserves leading whitespace of the original string on
+        the first line only."""
+        if not text:
+            return ['']
+        # Quick check: if the whole string fits, no wrapping needed.
+        if font.get_rect(text, size=font_size).width <= max_px:
+            return [text]
+        # Split on whitespace but remember leading indent so the
+        # continuation lines align cleanly under the original.
+        leading = len(text) - len(text.lstrip(' '))
+        indent = ' ' * leading
+        words = text.split()
+        if not words:
+            return [text]
+        lines = []
+        current = indent + words[0]
+        for w in words[1:]:
+            candidate = current + ' ' + w
+            if font.get_rect(candidate, size=font_size).width <= max_px:
+                current = candidate
+            else:
+                lines.append(current)
+                current = indent + w
+        lines.append(current)
+        return lines
 
     running = True
     while running:
@@ -426,6 +495,23 @@ def main():
                     controller.step_backward()
                 elif btn_fwd.collidepoint(mouse_pos) and not playing:
                     controller.step_forward()
+                elif btn_restart.collidepoint(mouse_pos):
+                    # Restart the *current* trial from its first step.
+                    # Trial start = first step whose yoked_trial_nums entry
+                    # equals the current step's trial number. If no trial
+                    # number is tracked (exposure) or we're already before
+                    # the session start, seek back to step -1.
+                    playing = False
+                    cur = controller.current_step
+                    target_step = 0
+                    if cur >= 0 and cur < len(yoked_trial_nums):
+                        cur_trial = yoked_trial_nums[cur]
+                        if cur_trial > 0:
+                            for i, tn in enumerate(yoked_trial_nums):
+                                if tn == cur_trial:
+                                    target_step = i
+                                    break
+                    controller.seek_to_step(target_step)
 
         # Auto-advance in play mode
         if playing and not controller.terminated:
@@ -463,11 +549,11 @@ def main():
                 screen.blit(left_surf, (ex, padding))
                 screen.blit(right_surf, (ex + eye_size + gap, padding))
 
-        # Info text (3 rows)
+        # Info text (wrapped to fit window)
         step = controller.current_step
         info_y = padding + grid_h + 4
-        line_h = int(font_size * 1.8)
         dir_names = {0: 'E', 1: 'S', 2: 'W', 3: 'N'}
+        info_max_px = content_w  # available text width
 
         if step >= 0:
             act = int(controller.actions[step])
@@ -476,7 +562,11 @@ def main():
             rwd_tag = '  RWD' if rewarded else ''
 
             yk_phase = yoked_phases[step] if step < len(yoked_phases) else '?'
-            line1 = (f'Step {step + 1}/{controller.total_steps}'
+            trial_tag = (
+                f'  trial={yoked_trial_nums[step]}/{n_trials_total}'
+                if n_trials_total and yoked_trial_nums[step] > 0 else ''
+            )
+            line1 = (f'Step {step + 1}/{controller.total_steps}{trial_tag}'
                      f'  act={action_names.get(act, "?")}'
                      f'  env={phase}  yoked={yk_phase}'
                      f'  tc={env.trial_count}{rwd_tag}')
@@ -487,6 +577,7 @@ def main():
             line2 = f'  env:   ({env_x:2d},{env_y:2d}) {env_d}'
 
             next_step = step + 1
+            diverge_line = False
             if next_step < controller.total_steps:
                 yk_x = int(actions_df['grid_x'].iloc[next_step])
                 yk_y = int(actions_df['grid_y'].iloc[next_step])
@@ -495,26 +586,36 @@ def main():
                 line3 = f'  yoked: ({yk_x:2d},{yk_y:2d}) {yk_d}  next_act={yk_act}'
                 if (env_x, env_y) != (yk_x, yk_y) or env_d != yk_d:
                     line3 += '  *** DIVERGE ***'
+                    diverge_line = True
             else:
                 line3 = '  yoked: (end of data)'
         else:
             line1 = f'Step 0/{controller.total_steps}  (press > or SPACE)'
             line2 = ''
             line3 = ''
+            diverge_line = False
 
-        font.render_to(screen, (padding, info_y), line1,
-                        size=font_size, fgcolor=_INFO_FG)
-        font.render_to(screen, (padding, info_y + line_h), line2,
-                        size=font_size, fgcolor=_INFO_FG)
-        diverge_color = (200, 0, 0) if '*** DIVERGE ***' in line3 else _INFO_FG
-        font.render_to(screen, (padding, info_y + line_h * 2), line3,
-                        size=font_size, fgcolor=diverge_color)
+        # Wrap each logical line to fit content width, then render.
+        rendered_lines = []
+        for src_line, color in (
+            (line1, _INFO_FG),
+            (line2, _INFO_FG),
+            (line3, (200, 0, 0) if diverge_line else _INFO_FG),
+        ):
+            for sub in wrap_to_width(src_line, info_max_px):
+                rendered_lines.append((sub, color))
+        for i, (txt, color) in enumerate(rendered_lines[:max_info_lines]):
+            font.render_to(screen, (padding, info_y + line_h * i), txt,
+                           size=font_size, fgcolor=color)
 
         # Buttons
         back_enabled = not playing and step > 0
         fwd_enabled = not playing and step + 1 < controller.total_steps
+        restart_enabled = step > -1  # only useful once started
         play_label = 'Pause' if playing else 'Play'
 
+        draw_button(btn_restart, 'Restart', restart_enabled,
+                    btn_restart.collidepoint(mouse_pos))
         draw_button(btn_back, '<', back_enabled, btn_back.collidepoint(mouse_pos))
         draw_button(btn_play, play_label, True, btn_play.collidepoint(mouse_pos))
         draw_button(btn_fwd, '>', fwd_enabled, btn_fwd.collidepoint(mouse_pos))

@@ -123,10 +123,12 @@ def main() -> int:
                 "view": view.tobytes(),
             })
 
-    # Extra pass: full 13×13×4 coverage for the expb_x_x_xx (acclimation)
-    # layout. The source embeddings parquet contains zero expb_x_x_xx poses
-    # (sampling missed the brief 60-step acclimation window), so the agent
-    # would otherwise hit _zero_view at the start of every expb session.
+    # Extra pass: full 13×13×4 coverage for the expb_x_x_xx layout, which
+    # under the corrected naming is the Phase B end-state (all barriers
+    # dropped, fully open, ≡ expa). During Phase B the agent walks anywhere
+    # on the maze, but the source embeddings parquet has zero expb_x_x_xx
+    # entries (it dedupes the open state into expa_x_x_xx instead). Without
+    # this pass the agent would hit _zero_view for every step of Phase B.
     seen = {r["pose_label"] for r in records}
     expb_cfg = env.layouts["expb_x_x_xx"]
     env.update_grid_configuration(expb_cfg)
