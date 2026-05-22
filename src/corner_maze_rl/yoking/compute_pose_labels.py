@@ -1,9 +1,9 @@
 """Compute per-step ``pose_label`` by replaying yoked actions through the env.
 
 ``pose_label`` encodes ``layout_class_x_y_dir`` (e.g. ``trl_e_s_xx_8_2_0``) and
-joins to ``data/dataframes/minigrid-views-allposes.parquet`` so view-mode
-training can fetch the pre-rendered 21x21x3 RGB observation by lookup instead
-of re-rendering through MiniGrid each step.
+joins to ``data/lookups/minigrid_views.npz`` so view-mode training can fetch
+the pre-rendered 21x21x3 RGB observation by lookup instead of re-rendering
+through MiniGrid each step.
 
 ``CornerMazeEnv`` is the source of truth for layout-tuple selection and
 ITI sub-config flipping, so we replay each session through it and read

@@ -1,7 +1,7 @@
 """DuckDB-backed loaders for the 5-table yoked dataset.
 
 The dataset lives at ``data/yoked/dataset/`` (gitignored; populated by
-``scripts/setup_data.sh`` or ``corner-maze-build-dataset``):
+``corner-maze-build-dataset`` against the upstream behavioral repo):
 
   * ``subjects.parquet``                       — one row per rat
   * ``sessions.parquet``                       — one row per session (all phases)
@@ -63,7 +63,7 @@ class YokedPaths:
         if missing:
             raise FileNotFoundError(
                 "Missing yoked dataset files:\n  " + "\n  ".join(missing)
-                + "\nRun scripts/setup_data.sh to copy them from the legacy repo."
+                + "\nRun corner-maze-build-dataset to populate them from the upstream repo."
             )
 
 

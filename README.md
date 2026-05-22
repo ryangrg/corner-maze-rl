@@ -18,7 +18,7 @@ A teaching repo for offline / behavior-cloning-style RL on a real neuroscience t
 
 > **Manuscript scope.** The canonical roster for yoking and training is **48 subjects** — the rats whose behavior will be published in the forthcoming corner-maze behavioral manuscript. The yoked dataset currently contains 56 subjects; 8 (marked **†** below) are present from earlier yoking runs but are **out of manuscript scope** and should not be used for new training runs, eval cells, or published comparisons. See [Manuscript subject roster](#manuscript-subject-roster) below.
 
-The yoked dataset lives at `data/yoked/dataset/` (gitignored; populated via `scripts/setup_data.sh` or rebuilt from upstream with `corner-maze-build-dataset`). It currently contains:
+The yoked dataset lives at `data/yoked/dataset/` (gitignored; populated by running `corner-maze-build-dataset` against the upstream behavioral repo). It currently contains:
 
 | Training group | Subjects | Primary acquisition session_type | Acquisition sessions | Exposure sessions |
 |---|---:|---|---:|---:|
@@ -30,7 +30,7 @@ The yoked dataset lives at `data/yoked/dataset/` (gitignored; populated via `scr
 
 <sup>*4 of the 121 PI sessions are tagged `Fixed Cue 1` rather than `Dark Train` — a per-subject experimental detour, not a separate paradigm.</sup>
 
-The dataset ships three action tables (one row per env step, schema `session_id, step, action, grid_x, grid_y, direction, rewarded, actions_to_reward, pose_label`). `pose_label` (`layout_class_x_y_dir`, e.g. `trl_e_s_xx_8_2_0`) joins to [data/dataframes/minigrid-views-allposes.parquet](data/dataframes/minigrid-views-allposes.parquet) to fetch the pre-rendered 21×21×3 RGB view for that step without re-rendering through MiniGrid:
+The dataset ships three action tables (one row per env step, schema `session_id, step, action, grid_x, grid_y, direction, rewarded, actions_to_reward, pose_label`). `pose_label` (`layout_class_x_y_dir`, e.g. `trl_e_s_xx_8_2_0`) joins to [data/lookups/minigrid_views.npz](data/lookups/minigrid_views.npz) to fetch the pre-rendered 21×21×3 RGB view for that step without re-rendering through MiniGrid:
 
 - `actions_synthetic_pretrial.parquet` — Acquisition only, synthetic pretrial (the primary input to training; 422 sessions, ~768 K rows)
 - `actions_real_pretrial.parquet` — Acquisition only, real pretrial (alt variant for ablations; 236 sessions, ~612 K rows)

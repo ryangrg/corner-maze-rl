@@ -283,7 +283,7 @@ def process_session(
     # 3. Replay through CornerMazeEnv to attach a per-row pose_label
     # (layout_class_x_y_dir). Pose at row i = env state BEFORE action i,
     # matching the divergence-checker convention. Joins to
-    # data/dataframes/minigrid-views-allposes.parquet for view lookups.
+    # data/lookups/minigrid_views.npz for view lookups.
     actions_df = actions_df.copy()
     actions_df['pose_label'] = compute_pose_labels(
         actions_df,
