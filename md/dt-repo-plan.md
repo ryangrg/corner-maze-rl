@@ -640,8 +640,7 @@ Pipeline ported in-tree 2026-05-08. Dataset regenerated to add `actions_exposure
 | Phase | Action | Source (legacy) | Target (new) | Notes |
 |-------|--------|-----------------|--------------|-------|
 | P1 | port | `notebooks/DatasetBuilder.ipynb` cell 1 | `src/corner_maze_rl/encoders/grid_cells.py` | Grid-cell pose-vector generator. Deterministic, no training. |
-| P2 | copy | `2S2C_task/embeddings/60d/position/pose_60Dvector_dictionary.pkl` | `data/encoders/pose_60Dvector_dictionary.pkl` | Pre-built grid-cell dict; ships for fast student start. |
-| P2 | copy | `2S2C_task/embeddings/60d/image/ryans_visual_embedding_dictionary.pkl` | `data/encoders/ryans_visual_embedding_dictionary.pkl` | Pretrained visual CNN dict. |
+| P2 | port | `2S2C_task/embeddings/60d/position/pose_60Dvector_dictionary.pkl` | `data/lookups/grid_cells_60d.npz` | Pre-built grid-cell lookup (`keys` int16, `vectors` float32); ships for fast student start. |
 | P2 | port | `notebooks/Minigrid_Maze_Yoked_Training.ipynb` cells 11–12 | `src/corner_maze_rl/encoders/visual_cnn.py` | CNN train + extract; pretrained weights ship. |
 | P1 | port | `src/rl/custom_rl.py::generate_state_vector*` | `src/corner_maze_rl/encoders/{one_hot_pose,reward_history}.py` | Two functions split into separate encoder modules. `n_wm_units` defaults to 10 (legacy default); shared by PPO and SR tabular paths. |
 

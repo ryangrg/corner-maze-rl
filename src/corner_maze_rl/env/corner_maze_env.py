@@ -14,9 +14,9 @@ from .constants import (
     AGENT_VIEW_BEHIND, AGENT_VIEW_SIZE,
     BARRIER_LOCATIONS, CELL_VIEW_BEHIND,
     CORNER_POSES, CORNERS, CUE_LOCATIONS,
-    EMBEDDING_DIM, EMBEDDING_PARQUET_PATH, EYE_IMG_SIZE,
+    EMBEDDING_DIM, EYE_IMG_SIZE,
+    MINIGRID_VIEWS_NPZ_PATH, POSE_VISUAL_NPZ_PATH,
     STEREO_IMG_SIZE, STEREO_DATASET_PATH,
-    VIEW_PARQUET_PATH,
     EXPB_ACCLIMATION_STEPS, EXPB_BARRIER_DELAY_STEPS,
     EXPB_MAX_STEPS, EXPB_NUM_REWARDS,
     EXPOSURE_ITI_STEPS, EXPOSURE_ITI_STD,
@@ -637,39 +637,59 @@ class CornerMazeEnv(MiniGridEnv):
     # --- Embedding observation methods ---
 
     def _load_embeddings(self):
-        """Load embedding data and build pose-to-vector lookup dicts."""
+        """Load embedding + eye-image lookups from the pose_visual npz.
+
+        Schema (see scripts/migrate_lookups_to_npz.py):
+          pose_labels: (N,) U   — every pose_label string
+          pose_to_idx: (N,) i32 — index into the unique-row arrays below
+          label_names: (M,) U
+          embeddings:  (M, 60) float32
+          left_eyes:   (M, 128, 128) uint8   (divide by 255 for [0,1] float)
+          right_eyes:  (M, 128, 128) uint8
+
+        Dicts are populated to match the legacy float64 contract so render and
+        downstream code do not need to change.
+        """
         import os
         from pathlib import Path
         # Search several candidate locations so this works for:
         #   (1) editable installs from a local clone (parents[3] = repo root)
-        #   (2) Colab / pip-installed wheels with parquet pre-staged in CWD
-        #   (3) explicit absolute path supplied via EMBEDDING_PARQUET_PATH
+        #   (2) Colab / pip-installed wheels with the npz pre-staged in CWD
+        #   (3) an absolute path supplied via POSE_VISUAL_NPZ_PATH
         repo_root = Path(__file__).resolve().parents[3]
         candidates = [
-            repo_root / EMBEDDING_PARQUET_PATH,
-            Path.cwd() / EMBEDDING_PARQUET_PATH,
-            Path(EMBEDDING_PARQUET_PATH),  # in case it's already absolute
+            repo_root / POSE_VISUAL_NPZ_PATH,
+            Path.cwd() / POSE_VISUAL_NPZ_PATH,
+            Path(POSE_VISUAL_NPZ_PATH),
         ]
-        parquet_path = next((p for p in candidates if p.is_file()), None)
-        if parquet_path is None:
+        npz_path = next((p for p in candidates if p.is_file()), None)
+        if npz_path is None:
             tried = "\n  ".join(str(p) for p in candidates)
             raise FileNotFoundError(
-                f"Embeddings parquet not found. Searched:\n  {tried}"
+                f"Pose-visual npz not found. Searched:\n  {tried}"
             )
-        emb_df = pd.read_parquet(parquet_path)
+
+        with np.load(npz_path, allow_pickle=False) as z:
+            pose_labels = z["pose_labels"]
+            pose_to_idx = z["pose_to_idx"]
+            label_names = z["label_names"]
+            unique_emb = z["embeddings"].astype(np.float64)             # (M, 60)
+            unique_left = z["left_eyes"].astype(np.float64) / 255.0     # (M, 128, 128)
+            unique_right = z["right_eyes"].astype(np.float64) / 255.0   # (M, 128, 128)
+
+        # One view per unique row, shared across every pose_label that maps to it.
+        emb_views = [unique_emb[i] for i in range(len(unique_emb))]
+        left_views = [unique_left[i] for i in range(len(unique_left))]
+        right_views = [unique_right[i] for i in range(len(unique_right))]
 
         self._pose_to_embedding = {}
         self._pose_to_left_eye = {}
         self._pose_to_right_eye = {}
-
-        for _, row in emb_df.iterrows():
-            emb_vec = np.array(row['embedding'], dtype=np.float64)
-            left_img = np.stack(row['left_eye_img']).astype(np.float64)
-            right_img = np.stack(row['right_eye_img']).astype(np.float64)
-            for pose_label in row['poses']:
-                self._pose_to_embedding[pose_label] = emb_vec
-                self._pose_to_left_eye[pose_label] = left_img
-                self._pose_to_right_eye[pose_label] = right_img
+        for pose_label, idx in zip(pose_labels, pose_to_idx):
+            key = str(pose_label)
+            self._pose_to_embedding[key] = emb_views[int(idx)]
+            self._pose_to_left_eye[key] = left_views[int(idx)]
+            self._pose_to_right_eye[key] = right_views[int(idx)]
 
         self._zero_embedding = np.zeros(EMBEDDING_DIM, dtype=np.float64)
         self._zero_eye = np.zeros((EYE_IMG_SIZE, EYE_IMG_SIZE), dtype=np.float64)
@@ -685,22 +705,20 @@ class CornerMazeEnv(MiniGridEnv):
             import json
             with open(os.path.join(dataset_path, 'metadata.json'), 'r') as f:
                 meta = json.load(f)
-            label_names = meta['label_names']
+            stereo_label_names = meta['label_names']
 
             # Build label_name → stereo pair mapping from dataset
             name_to_stereo = {}
-            for i, name in enumerate(label_names):
+            for i, name in enumerate(stereo_label_names):
                 # x_data[i] is (2, 96, 96) CHW; transpose to (96, 96, 2) HWC
                 stereo = np.transpose(x_data[i], (1, 2, 0)).astype(np.float32)
                 name_to_stereo[name] = stereo
 
-            # Map poses → stereo using the parquet's label_name → poses mapping
-            for _, row in emb_df.iterrows():
-                label_name = row['label_name']
-                stereo = name_to_stereo.get(label_name)
+            # Map poses → stereo via the label_names array from pose_visual.npz
+            for pose_label, idx in zip(pose_labels, pose_to_idx):
+                stereo = name_to_stereo.get(str(label_names[int(idx)]))
                 if stereo is not None:
-                    for pose_label in row['poses']:
-                        self._pose_to_stereo[pose_label] = stereo
+                    self._pose_to_stereo[str(pose_label)] = stereo
 
             self._zero_stereo = np.zeros(
                 (STEREO_IMG_SIZE, STEREO_IMG_SIZE, 2), dtype=np.float32
@@ -709,7 +727,7 @@ class CornerMazeEnv(MiniGridEnv):
     def _load_views(self):
         """Load the precomputed egocentric-view lookup for obs_mode='view'.
 
-        Avoids re-running get_pov_render_mod on every step. The parquet is
+        Avoids re-running get_pov_render_mod on every step. The npz is
         generated by scripts/build_minigrid_view_lookup.py and is bit-exact
         with the live render across all session types. If the file isn't
         present, self._pose_to_view stays None and _build_observation falls
@@ -720,25 +738,26 @@ class CornerMazeEnv(MiniGridEnv):
 
         repo_root = Path(__file__).resolve().parents[3]
         candidates = [
-            repo_root / VIEW_PARQUET_PATH,
-            Path.cwd() / VIEW_PARQUET_PATH,
-            Path(VIEW_PARQUET_PATH),
+            repo_root / MINIGRID_VIEWS_NPZ_PATH,
+            Path.cwd() / MINIGRID_VIEWS_NPZ_PATH,
+            Path(MINIGRID_VIEWS_NPZ_PATH),
         ]
-        parquet_path = next((p for p in candidates if p.is_file()), None)
-        if parquet_path is None:
+        npz_path = next((p for p in candidates if p.is_file()), None)
+        if npz_path is None:
             warnings.warn(
-                f"View lookup parquet not found at any of {[str(p) for p in candidates]}; "
+                f"View lookup npz not found at any of {[str(p) for p in candidates]}; "
                 "falling back to live get_pov_render_mod on every step.",
                 stacklevel=2,
             )
             return  # leave self._pose_to_view as None
 
-        vdf = pd.read_parquet(parquet_path)
+        with np.load(npz_path, allow_pickle=False) as z:
+            pose_labels = z["pose_labels"]
+            views = z["views"]
+        # Per-row views are views into the contiguous (N, 21, 21, 3) array,
+        # so the dict adds ~5k Python references but no array copies.
         self._pose_to_view = {
-            r.pose_label: np.frombuffer(r.view, dtype=np.uint8).reshape(
-                AGENT_VIEW_SIZE, AGENT_VIEW_SIZE, 3
-            )
-            for r in vdf.itertuples()
+            str(label): views[i] for i, label in enumerate(pose_labels)
         }
 
     def _get_pose_label(self) -> str:

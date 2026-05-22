@@ -13,13 +13,12 @@ Layout of the 60-D vector (5 modules × 3 phases per group, 4 groups):
 
 The "module" tensors (shape ``(11, 11, 3)`` per module) come from the legacy
 asset pipeline; they aren't reproduced here. We ship the prebuilt
-``pose_60Dvector_dictionary.pkl`` (copied from legacy) as the canonical
-encoder, and provide ``make_pose_vector_dict`` for users who want to
-regenerate from their own modules.
+``data/lookups/grid_cells_60d.npz`` as the canonical encoder, and provide
+``make_pose_vector_dict`` for users who want to regenerate from their own
+modules.
 """
 from __future__ import annotations
 
-import pickle
 from pathlib import Path
 from typing import Iterable, Mapping
 
@@ -152,9 +151,12 @@ def make_pose_vector_dict(
 class GridCellEncoder:
     """StateEncoder using a precomputed pose -> 60-D vector dictionary.
 
-    The default dictionary path points at the in-repo copy of
-    ``data/encoders/pose_60Dvector_dictionary.pkl`` (484 poses; 11x11x4).
-    Pass ``dict_path`` to use a different one (e.g. one regenerated via
+    The default lookup path points at ``data/lookups/grid_cells_60d.npz``
+    (484 poses; 11x11x4). The npz has two arrays:
+      keys:    (N, 3) int16  — (x, y, direction)
+      vectors: (N, 60) float32
+
+    Pass ``dict_path`` to use a different file (e.g. one regenerated via
     ``make_pose_vector_dict``).
     """
 
@@ -164,12 +166,17 @@ class GridCellEncoder:
         path = Path(dict_path) if dict_path is not None else _default_dict_path()
         if not path.is_file():
             raise FileNotFoundError(
-                f"GridCellEncoder dict not found at {path}. "
-                "Either ship pose_60Dvector_dictionary.pkl into data/encoders/ "
+                f"GridCellEncoder lookup not found at {path}. "
+                "Either ship grid_cells_60d.npz into data/lookups/ "
                 "or build it from grid modules via make_pose_vector_dict()."
             )
-        with path.open("rb") as f:
-            self._dict: dict[tuple[int, int, int], np.ndarray] = pickle.load(f)
+        with np.load(path, allow_pickle=False) as z:
+            keys = z["keys"]
+            vectors = z["vectors"]
+        self._dict: dict[tuple[int, int, int], np.ndarray] = {
+            (int(k[0]), int(k[1]), int(k[2])): vectors[i]
+            for i, k in enumerate(keys)
+        }
         self._dict_path = path
 
     @property
@@ -196,8 +203,8 @@ class GridCellEncoder:
 
 
 def _default_dict_path() -> Path:
-    """Locate the bundled pose-vector dictionary.
+    """Locate the bundled pose-vector lookup.
 
-    Looks in ``<repo>/data/encoders/`` relative to the package install.
+    Looks in ``<repo>/data/lookups/`` relative to the package install.
     """
-    return Path(__file__).resolve().parents[3] / "data" / "encoders" / "pose_60Dvector_dictionary.pkl"
+    return Path(__file__).resolve().parents[3] / "data" / "lookups" / "grid_cells_60d.npz"

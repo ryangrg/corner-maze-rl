@@ -18,7 +18,7 @@ from corner_maze_rl.models.decision_transformer import DecisionTransformer, DTCo
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PREBUILT_DICT = REPO_ROOT / "data" / "encoders" / "pose_60Dvector_dictionary.pkl"
+PREBUILT_DICT = REPO_ROOT / "data" / "lookups" / "grid_cells_60d.npz"
 
 
 @pytest.fixture

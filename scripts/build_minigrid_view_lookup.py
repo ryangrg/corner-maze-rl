@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Build a MiniGrid egocentric-view lookup table for all CornerMazeEnv poses.
 
-Output: data/dataframes/minigrid-views-allposes.parquet — one row per pose
-label, with the raw (21, 21, 3) uint8 view bytes that
-``env.get_pov_render_mod(VIEW_TILE_SIZE)`` would produce at runtime.
+Output: data/lookups/minigrid_views.npz — two arrays:
+  pose_labels: (N,) U   — pose_label strings
+  views:       (N, 21, 21, 3) uint8 — what env.get_pov_render_mod(VIEW_TILE_SIZE)
+                                       produces at runtime.
 
-Pose-label set is sourced from the existing
-``dual-indep-20260319-222411-embeddings-allposes.parquet`` so this file lines
+Pose-label set is sourced from data/lookups/pose_visual.npz so this file lines
 up 1:1 with the embedding / eye-image lookups already used by the env.
 """
 from __future__ import annotations
@@ -15,16 +15,14 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from corner_maze_rl.env.constants import EMBEDDING_PARQUET_PATH, VIEW_TILE_SIZE
+from corner_maze_rl.env.constants import (
+    MINIGRID_VIEWS_NPZ_PATH, POSE_VISUAL_NPZ_PATH, VIEW_TILE_SIZE,
+)
 from corner_maze_rl.env.corner_maze_env import CornerMazeEnv
-
-
-OUTPUT_REL = "data/dataframes/minigrid-views-allposes.parquet"
 
 
 def parse_pose_label(label: str) -> tuple[str, int, int, int]:
@@ -60,17 +58,16 @@ def build_class_to_config(env: CornerMazeEnv) -> dict[str, tuple[int, ...]]:
 
 
 def main() -> int:
-    emb_path = REPO_ROOT / EMBEDDING_PARQUET_PATH
-    out_path = REPO_ROOT / OUTPUT_REL
+    src_path = REPO_ROOT / POSE_VISUAL_NPZ_PATH
+    out_path = REPO_ROOT / MINIGRID_VIEWS_NPZ_PATH
 
-    print(f"Reading {emb_path.relative_to(REPO_ROOT)}")
-    emb_df = pd.read_parquet(emb_path)
-
-    all_poses: set[str] = set()
-    for row in emb_df.itertuples():
-        all_poses.update(str(p) for p in row.poses)
+    print(f"Reading {src_path.relative_to(REPO_ROOT)}")
+    with np.load(src_path, allow_pickle=False) as z:
+        pose_label_arr = z["pose_labels"]
+        label_names = z["label_names"]
+    all_poses: set[str] = {str(p) for p in pose_label_arr}
     print(f"  -> {len(all_poses)} unique pose labels "
-          f"across {len(emb_df)} label_name rows")
+          f"across {len(label_names)} label_name rows")
 
     print("Initializing CornerMazeEnv (obs_mode='view')")
     env = CornerMazeEnv(
@@ -114,22 +111,15 @@ def main() -> int:
                     f"Unexpected view shape/dtype for {label}: "
                     f"{view.shape} {view.dtype}"
                 )
-            records.append({
-                "pose_label": label,
-                "layout_class": cls,
-                "x": x,
-                "y": y,
-                "dir": d,
-                "view": view.tobytes(),
-            })
+            records.append((label, view))
 
     # Extra pass: full 13×13×4 coverage for the expb_x_x_xx layout, which
     # under the corrected naming is the Phase B end-state (all barriers
     # dropped, fully open, ≡ expa). During Phase B the agent walks anywhere
-    # on the maze, but the source embeddings parquet has zero expb_x_x_xx
+    # on the maze, but the source pose-visual lookup has zero expb_x_x_xx
     # entries (it dedupes the open state into expa_x_x_xx instead). Without
     # this pass the agent would hit _zero_view for every step of Phase B.
-    seen = {r["pose_label"] for r in records}
+    seen = {label for label, _ in records}
     expb_cfg = env.layouts["expb_x_x_xx"]
     env.update_grid_configuration(expb_cfg)
     expb_added = 0
@@ -142,30 +132,23 @@ def main() -> int:
                 env.agent_pos = (x, y)
                 env.agent_dir = d
                 view = env.get_pov_render_mod(VIEW_TILE_SIZE)
-                records.append({
-                    "pose_label": label,
-                    "layout_class": "expb_x_x_xx",
-                    "x": x,
-                    "y": y,
-                    "dir": d,
-                    "view": view.tobytes(),
-                })
+                records.append((label, view))
                 expb_added += 1
     print(f"  -> appended {expb_added} expb_x_x_xx poses for full coverage")
 
-    df = pd.DataFrame.from_records(records).astype(
-        {"x": "int16", "y": "int16", "dir": "int8"}
-    )
+    # Sort by pose_label so the on-disk order is deterministic across rebuilds.
+    records.sort(key=lambda r: r[0])
+    pose_labels = np.asarray([r[0] for r in records], dtype=np.str_)
+    views = np.stack([r[1] for r in records])  # (N, 21, 21, 3) uint8
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(out_path, compression="zstd", compression_level=9, index=False)
+    np.savez_compressed(out_path, pose_labels=pose_labels, views=views)
 
     size_mb = out_path.stat().st_size / (1024 * 1024)
     print(f"Wrote {out_path.relative_to(REPO_ROOT)}: "
-          f"{len(df)} rows, {size_mb:.2f} MB")
-    if size_mb > 25:
-        print("WARNING: file >25 MB; consider PNG-compressing the view column.")
+          f"{len(pose_labels)} rows, {size_mb:.2f} MB")
 
-    written = set(df["pose_label"])
+    written = set(map(str, pose_labels))
     missing = all_poses - written
     extra_non_expb = (written - all_poses) - {
         f"expb_x_x_xx_{x}_{y}_{d}"
@@ -176,7 +159,7 @@ def main() -> int:
     if extra_non_expb:
         print(f"WARNING: {len(extra_non_expb)} unexpected extra pose_labels in output")
     if not missing and not extra_non_expb:
-        print("pose_label set covers source parquet + full expb_x_x_xx pass")
+        print("pose_label set covers source npz + full expb_x_x_xx pass")
 
     return 0
 
