@@ -1,0 +1,1317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10_vanilla_dt.ipynb — Cell-by-Cell Walkthrough</title>
+<style>
+  :root {
+    --bg:        #1a1a1a;
+    --panel:     #232323;
+    --code-bg:   #2a2a2a;
+    --border:    #3a3a3a;
+    --text:      #e8e8e8;
+    --muted:     #9a9a9a;
+    --accent:    #6bb1ff;
+    --accent-2:  #ffb86b;
+    --warn-bg:   #3a2d1a;
+    --warn-bd:   #6e5230;
+    --info-bg:   #1c2a3a;
+    --info-bd:   #2c4a6e;
+    --good-bg:   #1c3a26;
+    --good-bd:   #2c6e44;
+    --key:       #c990ff;
+    --str:       #b8d77a;
+    --num:       #ffb86b;
+    --com:       #6e7a8a;
+    --fn:        #6bb1ff;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  header {
+    padding: 28px 40px 18px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #1f1f1f 0%, var(--bg) 100%);
+  }
+  header h1 {
+    margin: 0 0 6px;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  header .sub {
+    color: var(--muted);
+    font-size: 14px;
+  }
+  header code {
+    background: var(--code-bg);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 0;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  nav#toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 22px 18px 32px 28px;
+    border-right: 1px solid var(--border);
+    background: var(--panel);
+    font-size: 13.5px;
+  }
+  nav#toc h3 {
+    margin: 0 0 10px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  nav#toc ol {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    counter-reset: cell;
+  }
+  nav#toc li {
+    padding: 4px 0;
+    counter-increment: cell;
+  }
+  nav#toc li::before {
+    content: counter(cell) ". ";
+    color: var(--muted);
+    margin-right: 4px;
+  }
+  nav#toc a {
+    color: var(--text);
+  }
+  nav#toc a:hover { color: var(--accent); }
+  main {
+    padding: 22px 40px 80px;
+    min-width: 0;
+  }
+  section.cell {
+    margin: 0 0 56px;
+    padding: 0 0 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  section.cell:last-child { border-bottom: none; }
+  section.cell h2 {
+    margin: 28px 0 6px;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    scroll-margin-top: 12px;
+  }
+  section.cell h2 .num {
+    color: var(--accent);
+    margin-right: 10px;
+    font-weight: 500;
+  }
+  section.cell .role {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0 0 18px;
+  }
+  section.cell h3 {
+    margin: 28px 0 10px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--accent-2);
+  }
+  section.cell h4 {
+    margin: 18px 0 8px;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  p { margin: 10px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+  code {
+    font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    background: var(--code-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #f0d99b;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 12px 0;
+  }
+  pre code {
+    background: transparent;
+    padding: 0;
+    color: #e8e8e8;
+    font-size: 13px;
+  }
+  .k  { color: var(--key); }       /* keyword */
+  .s  { color: var(--str); }       /* string */
+  .n  { color: var(--num); }       /* number */
+  .c  { color: var(--com); font-style: italic; }   /* comment */
+  .fn { color: var(--fn); }        /* function */
+  table {
+    border-collapse: collapse;
+    margin: 14px 0;
+    width: 100%;
+    font-size: 13.5px;
+  }
+  th, td {
+    text-align: left;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    color: var(--accent-2);
+    font-weight: 600;
+    border-bottom: 2px solid var(--border);
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .callout {
+    margin: 14px 0;
+    padding: 12px 14px;
+    border-left: 3px solid var(--info-bd);
+    background: var(--info-bg);
+    border-radius: 0 4px 4px 0;
+    font-size: 14px;
+  }
+  .callout .label {
+    display: inline-block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-right: 8px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .callout.warn { border-left-color: var(--warn-bd); background: var(--warn-bg); }
+  .callout.warn .label { color: var(--accent-2); }
+  .callout.good { border-left-color: var(--good-bd); background: var(--good-bg); }
+  .callout.good .label { color: #79d28e; }
+  .lbl {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 14px;
+    margin: 12px 0;
+  }
+  .lbl pre { margin: 0; }
+  .lbl .note {
+    padding: 12px 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+  .lbl .note p:first-child { margin-top: 0; }
+  .lbl .note p:last-child { margin-bottom: 0; }
+  .lbl .note .lineref {
+    font-family: "SF Mono", monospace;
+    color: var(--accent);
+    font-size: 12px;
+  }
+  hr.divider {
+    border: none;
+    border-top: 1px dashed var(--border);
+    margin: 26px 0;
+  }
+  .legend {
+    display: flex;
+    gap: 18px;
+    font-size: 12.5px;
+    color: var(--muted);
+    margin: 8px 0 18px;
+    flex-wrap: wrap;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    display: inline-block;
+  }
+  .file-ref {
+    color: var(--accent);
+    font-family: "SF Mono", monospace;
+    font-size: 12.5px;
+  }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav#toc { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    .lbl { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>10_vanilla_dt.ipynb — Cell-by-Cell Walkthrough</h1>
+  <div class="sub">
+    A reading guide for <code>notebooks/10_vanilla_dt.ipynb</code> — a faithful port of
+    <a href="https://github.com/kzl/decision-transformer/tree/master/gym">kzl/decision-transformer/gym</a>
+    adapted to the corner-maze yoked rat dataset. Companion to
+    <code>docs/10_vanilla_dt.md</code>.
+  </div>
+</header>
+
+<div class="layout">
+
+<nav id="toc">
+  <h3>Cells</h3>
+  <ol>
+    <li><a href="#cell-1">Configuration</a></li>
+    <li><a href="#cell-2">Subject ↔ group validation</a></li>
+    <li><a href="#cell-3">Load yoked + RTG + globals</a></li>
+    <li><a href="#cell-4">RatWindowDataset + loaders</a></li>
+    <li><a href="#cell-5">DT model</a></li>
+    <li><a href="#cell-6">Training loop</a></li>
+    <li><a href="#cell-7">Env inference helper</a></li>
+    <li><a href="#cell-8">Acquisition sanity check</a></li>
+    <li><a href="#cell-9">Probes loop</a></li>
+    <li><a href="#cell-10">Full pipeline runner</a></li>
+    <li><a href="#cell-11">Cross-run aggregation</a></li>
+    <li><a href="#cell-12">Visualization (rliable)</a></li>
+    <li><a href="#cell-13">DT diagnostics</a></li>
+    <li><a href="#cell-14">Session playback</a></li>
+    <li><a href="#cell-15">Recipes</a></li>
+  </ol>
+  <hr class="divider">
+  <h3>Legend</h3>
+  <div class="legend" style="flex-direction:column; gap:8px;">
+    <span><span class="dot" style="background:var(--key)"></span>keyword</span>
+    <span><span class="dot" style="background:var(--str)"></span>string</span>
+    <span><span class="dot" style="background:var(--num)"></span>number</span>
+    <span><span class="dot" style="background:var(--fn)"></span>function</span>
+    <span><span class="dot" style="background:var(--com)"></span>comment</span>
+  </div>
+</nav>
+
+<main>
+
+<!-- =====================================================================
+     CELL 1: CONFIGURATION
+===================================================================== -->
+<section class="cell" id="cell-1">
+  <h2><span class="num">1.</span>Configuration</h2>
+  <p class="role">Defines every knob the rest of the notebook reads. No side effects beyond a printed banner.</p>
+
+  <p>This is the only cell you typically edit. Everything downstream reads from these globals: cells 2–14 import them by name. Re-running cell 1 alone doesn't update earlier in-memory globals — re-run top-to-bottom after edits.</p>
+
+  <h3>Experiment identity</h3>
+  <div class="lbl">
+    <pre><code><span class="n">RUN_NAME</span>         = <span class="s">'dt-vanilla-pi-cm016'</span>
+<span class="n">EXPERIMENT_NOTES</span> = <span class="s">'Vanilla DT port of kzl/gym; per-rat; image-embedding encoder.'</span></code></pre>
+    <div class="note">
+      <p><code>RUN_NAME</code> becomes the prefix of the artifact directory: <code>data/runs/{RUN_NAME}_{UTC_timestamp}/</code>. Cell 2 appends a timestamp so reruns don't collide. Pick something that reflects cohort + subject.</p>
+      <p><code>EXPERIMENT_NOTES</code> is human-readable only — written into <code>run_config.json</code> per seed for posterity.</p>
+    </div>
+  </div>
+
+  <h3>Subject + group</h3>
+  <div class="lbl">
+    <pre><code><span class="n">TRAINING_GROUP</span> = <span class="s">'pi_vc'</span>      <span class="c"># 'pi' | 'pi_vc' | 'vc'</span>
+<span class="n">SUBJECTS</span>       = [<span class="s">'CM016'</span>]
+<span class="n">POOL_SUBJECTS</span>  = <span class="k">False</span></code></pre>
+    <div class="note">
+      <p><code>TRAINING_GROUP</code> is the short code; Cell 2 maps it via <code>GROUP_ALIASES</code> to the canonical <code>training_group</code> label stored in <code>subjects.parquet</code> (<code>'PI'</code>, <code>'PI+VC'</code>, <code>'VC'</code>, <code>'PI+VC_f1'</code>). The cell asserts every subject in <code>SUBJECTS</code> matches the group.</p>
+      <p><code>POOL_SUBJECTS=True</code> creates one <code>TrainingUnit</code> per group whose dataset is the union of all subjects' yoked data — one model per pool. <code>False</code> (the default) creates one unit per subject — one model per rat. The per-rat design is what supports the eventual cohort comparison; the pooled design only makes sense if you want a single "average rat" model.</p>
+    </div>
+  </div>
+
+  <h3>Session types</h3>
+  <pre><code><span class="n">SESSION_TYPES</span> = [
+    <span class="s">'PI+VC f2 acquisition'</span>,    <span class="c"># idx 0 — Cell 8 uses this for the acquisition sanity-check</span>
+    <span class="s">'PI+VC f2 novel route'</span>,    <span class="c"># idx 1+ — Cell 9 iterates these as probes</span>
+    <span class="s">'PI+VC f2 no cue'</span>,
+    <span class="s">'PI+VC f2 rotate'</span>,
+    <span class="s">'PI+VC f2 reversal'</span>,
+]</code></pre>
+  <div class="callout warn">
+    <span class="label">Convention</span>
+    <code>SESSION_TYPES[0]</code> <strong>must be the acquisition paradigm</strong>. Cells 8 and 9 silently index <code>SESSION_TYPES[0]</code> and <code>SESSION_TYPES[1:]</code>. Reordering the list will silently break the pipeline.
+  </div>
+  <p>The full list of valid paradigm strings lives in a comment block inside the cell (kept in sync with <code>SESSION_GENERATORS</code> in <a class="file-ref" href="../src/corner_maze_rl/env/corner_maze_env.py">corner_maze_env.py</a> around line 1143).</p>
+
+  <h3>Inference</h3>
+  <pre><code><span class="n">ACQ_INFERENCE_TRIALS</span> = <span class="n">32</span>     <span class="c"># env paradigms shuffle in chunks of 8; PI+VC f2 acq = 4 chunks = 32</span></code></pre>
+  <p>Note: setting this lower doesn't shrink the env's session — the env always generates a multiple of 8. <code>max_trials</code> in Cell 7 just caps how many of them the DT plays through.</p>
+
+  <h3>Seed sweep</h3>
+  <pre><code><span class="n">N_RUNS</span> = <span class="n">5</span>     <span class="c"># sequential seeds 0..4; per-seed model init, split, batch order are all derived from this</span></code></pre>
+
+  <h3>Cost (locked)</h3>
+  <div class="lbl">
+    <pre><code><span class="k">@dataclass</span>(frozen=<span class="k">True</span>)
+<span class="k">class</span> <span class="fn">CostConfig</span>:
+    terminal_reward: <span class="k">float</span> = <span class="n">1.0</span>
+    step_cost:       <span class="k">float</span> = <span class="n">0.001</span>
+<span class="n">COST</span> = <span class="fn">CostConfig</span>()</code></pre>
+    <div class="note">
+      <p>Part of the <strong>run identity</strong>: training and inference use the same <code>(R, c)</code>. The training-time RTG is <code>rtg = R − c·actions_to_reward</code>; inference re-uses the same constants for re-anchoring and within-trial drift. Changing these for inference without retraining would shift the input distribution off the trained manifold.</p>
+      <p>These are <em>not</em> the env's actual rewards. The env emits <code>-0.0005</code> (forward/pickup/pause), <code>-0.001</code> (turn), <code>+1.061</code> (correct well). See Cell 7's RTG management note for why we ignore env rewards.</p>
+    </div>
+  </div>
+
+  <h3>RTG anchoring</h3>
+  <pre><code><span class="n">LAST_N_ACQ_FOR_RTG</span> = <span class="n">2</span>     <span class="c"># trailing acq sessions per subject feed EXPECTED_OPT_LEN</span>
+<span class="n">EXPECTED_OPT_LEN</span>   = <span class="k">None</span>  <span class="c"># filled in by Cell 3 (median trial-start a2r over last N acq sessions)</span>
+<span class="n">INFERENCE_RTG</span>      = <span class="k">None</span>  <span class="c"># = R − c · EXPECTED_OPT_LEN, filled in by Cell 3</span></code></pre>
+  <p><code>LAST_N_ACQ_FOR_RTG=2</code> targets the rat's graduation-criterion sessions (every rat in this dataset hit ≥72% correct first-goal choice on its last two acq sessions by selection rule, so we trust the gate implicitly).</p>
+
+  <h3>Windowing</h3>
+  <pre><code><span class="n">K</span> = <span class="n">128</span>     <span class="c"># context length; kzl gym default is 20</span></code></pre>
+  <p>Bumped from kzl's 20 because rat sessions are 2-3× longer than kzl episodes and rat behavior shows cross-trial strategy. A K=128 window typically spans 1-3 trials → DT sees cross-trial context.</p>
+  <p>Memory scales as <code>O(K²)</code> in attention scores. K=128 → ~150 MB attention/layer/batch at default config. K=256 → 600 MB. Cell 10's <code>_memory_precheck</code> guards against blowing the device.</p>
+
+  <h3>State encoder</h3>
+  <pre><code><span class="n">ENCODER_TYPE</span>   = <span class="s">'pose_visual'</span>   <span class="c"># 'pose_visual' | 'grid_cell' | 'image_cnn'</span>
+<span class="n">ENCODER_DIM</span>    = <span class="n">60</span>              <span class="c"># 60D embedding</span>
+<span class="n">FREEZE_ENCODER</span> = <span class="k">True</span>            <span class="c"># pose_visual / grid_cell are frozen lookups; ignored for image_cnn</span></code></pre>
+  <table>
+    <thead><tr><th>ENCODER_TYPE</th><th>lookup file</th><th>shape</th><th>per-step indexing</th></tr></thead>
+    <tbody>
+      <tr><td><code>pose_visual</code></td><td><code>data/lookups/pose_visual.npz</code></td><td>(295, 60) float32</td><td><code>pose_to_idx[pose_labels.index(label)]</code> (4536→295)</td></tr>
+      <tr><td><code>grid_cell</code></td><td><code>data/lookups/grid_cells_60d.npz</code></td><td>(484, 60) float32</td><td><code>((x-1)*11 + (y-1))*4 + d</code></td></tr>
+      <tr><td><code>image_cnn</code></td><td><code>data/lookups/minigrid_views.npz</code></td><td>(5212, 21, 21, 3) uint8</td><td><code>pose_labels.index(label)</code> (1-to-1)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>DT architecture</h3>
+  <pre><code><span class="n">HIDDEN_DIM</span>   = <span class="n">60</span>     <span class="c"># matched to encoder dim so state encoder output feeds the body directly</span>
+<span class="n">N_LAYERS</span>     = <span class="n">3</span>
+<span class="n">N_HEADS</span>      = <span class="n">4</span>      <span class="c"># 60 / 4 = 15-dim per head</span>
+<span class="n">DROPOUT</span>      = <span class="n">0.1</span>
+<span class="n">MAX_EP_LEN</span>   = <span class="k">None</span>   <span class="c"># filled in by Cell 3 from max trial length (per-trial timestep, not per-session)</span>
+<span class="n">NUM_ACTIONS</span>  = <span class="n">5</span>      <span class="c"># 0=left, 1=right, 2=forward, 3=pickup, 4=pause</span>
+<span class="n">ACTION_MASK_INFERENCE</span> = <span class="k">False</span>   <span class="c"># DT learns the pickup-in-corner constraint from data</span></code></pre>
+
+  <h3>Training</h3>
+  <pre><code><span class="n">N_EPOCHS</span>            = <span class="n">50</span>
+<span class="n">BATCH_SIZE</span>          = <span class="n">64</span>     <span class="c"># kzl default</span>
+<span class="n">LEARNING_RATE</span>       = <span class="n">1e-4</span>   <span class="c"># kzl default</span>
+<span class="n">WEIGHT_DECAY</span>        = <span class="n">1e-4</span>
+<span class="n">WARMUP_STEPS</span>        = <span class="k">None</span>   <span class="c"># filled in by Cell 3 (~5% of total opt steps, clamped to [100, 10000])</span>
+<span class="n">GRAD_CLIP</span>           = <span class="n">0.25</span>
+<span class="n">EARLY_STOP_PATIENCE</span> = <span class="n">5</span>
+<span class="n">VAL_FRAC</span>            = <span class="n">0.15</span>
+<span class="n">NUM_WORKERS</span>         = <span class="n">0</span>      <span class="c"># single-process loading; faster than IPC for small datasets</span></code></pre>
+
+  <h3>Pipeline gating</h3>
+  <pre><code><span class="n">ACQ_PASS_COMPLETED_TRIALS</span> = <span class="n">24</span>   <span class="c"># default 24/32 = 75% threshold</span></code></pre>
+  <p>Cell 10 runs acq sanity check first. Probes only run if at least one rollout (across all temps × repeats) for that seed completes ≥ this many trials. If the DT can't complete 75% of canonical-frame trials in <em>any</em> inference mode, probe results are uninterpretable — the model didn't learn the base task.</p>
+
+  <h3>Device + paths</h3>
+  <pre><code><span class="n">FORCE_CPU</span> = <span class="k">False</span>
+<span class="k">if</span>   <span class="n">FORCE_CPU</span>:                     <span class="n">DEVICE</span> = <span class="s">'cpu'</span>
+<span class="k">elif</span> <span class="fn">torch.cuda.is_available</span>():    <span class="n">DEVICE</span> = <span class="s">'cuda'</span>
+<span class="k">elif</span> <span class="fn">torch.backends.mps.is_available</span>(): <span class="n">DEVICE</span> = <span class="s">'mps'</span>
+<span class="k">else</span>:                                  <span class="n">DEVICE</span> = <span class="s">'cpu'</span>
+
+<span class="n">REPO_ROOT</span>     = <span class="fn">Path.cwd</span>().parent
+<span class="n">ARTIFACT_ROOT</span> = <span class="n">REPO_ROOT</span> / <span class="s">'data'</span> / <span class="s">'runs'</span> / <span class="n">RUN_NAME</span></code></pre>
+  <p><code>Path.cwd().parent</code> resolves to the repo root because notebooks run from <code>notebooks/</code>. Cell 2 timestamps <code>ARTIFACT_ROOT</code> to produce the actual <code>RUN_ROOT</code>.</p>
+</section>
+
+<!-- =====================================================================
+     CELL 2: SUBJECT VALIDATION
+===================================================================== -->
+<section class="cell" id="cell-2">
+  <h2><span class="num">2.</span>Subject ↔ group validation + training units + paths</h2>
+  <p class="role">Validates the configured subjects against the canonical metadata, materializes the training-unit loop axis, and creates the timestamped output directory.</p>
+
+  <h3>Group alias + assertion</h3>
+  <pre><code><span class="n">GROUP_ALIASES</span> = {<span class="s">'pi'</span>: <span class="s">'PI'</span>, <span class="s">'pi_vc'</span>: <span class="s">'PI+VC'</span>, <span class="s">'vc'</span>: <span class="s">'VC'</span>, <span class="s">'pi_vc_f1'</span>: <span class="s">'PI+VC_f1'</span>}
+<span class="k">assert</span> <span class="n">TRAINING_GROUP</span> <span class="k">in</span> <span class="n">GROUP_ALIASES</span>
+<span class="k">assert</span> <span class="fn">len</span>(<span class="n">SUBJECTS</span>) &gt;= <span class="n">1</span>
+
+<span class="n">subjects_df</span> = <span class="fn">pd.read_parquet</span>(<span class="n">REPO_ROOT</span> / <span class="s">'data/yoked/dataset/subjects.parquet'</span>)
+<span class="k">for</span> <span class="n">subj</span> <span class="k">in</span> <span class="n">SUBJECTS</span>:
+    <span class="n">row</span> = <span class="n">subjects_df</span>[<span class="n">subjects_df</span>[<span class="s">'subject_name'</span>] == <span class="n">subj</span>]
+    <span class="fn">assert_subject_group_match</span>(
+        training_group=<span class="n">GROUP_ALIASES</span>[<span class="n">TRAINING_GROUP</span>],
+        subject_training_group=<span class="n">row</span>.iloc[<span class="n">0</span>].get(<span class="s">'training_group'</span>),
+    )</code></pre>
+  <p>Loads the canonical subject roster, then for each configured subject confirms its <code>training_group</code> column matches the configured <code>TRAINING_GROUP</code> (mapped through the alias). <code>assert_subject_group_match</code> lives in <code>corner_maze_rl.data.session_types</code> and raises with a useful message if there's a mismatch — catches the common "wrong group for this rat" mistake at cell-2 time.</p>
+
+  <h3>TrainingUnit — the loop axis</h3>
+  <div class="lbl">
+    <pre><code><span class="k">@dataclass</span>(frozen=<span class="k">True</span>)
+<span class="k">class</span> <span class="fn">TrainingUnit</span>:
+    label:    <span class="k">str</span>
+    subjects: <span class="k">tuple</span>[<span class="k">str</span>, ...]
+
+<span class="k">if</span> <span class="n">POOL_SUBJECTS</span>:
+    <span class="n">TRAINING_UNITS</span> = [<span class="fn">TrainingUnit</span>(label=<span class="s">f'pooled_{TRAINING_GROUP}'</span>,
+                                    subjects=<span class="fn">tuple</span>(<span class="n">SUBJECTS</span>))]
+<span class="k">else</span>:
+    <span class="n">TRAINING_UNITS</span> = [<span class="fn">TrainingUnit</span>(label=<span class="s">f'subject_{s}'</span>, subjects=(<span class="n">s</span>,))
+                      <span class="k">for</span> <span class="n">s</span> <span class="k">in</span> <span class="n">SUBJECTS</span>]</code></pre>
+    <div class="note">
+      <p>One <code>TrainingUnit</code> = one DT instance the pipeline will train. A unit has a label (used as a directory name) and a tuple of subjects whose yoked data feeds its dataset.</p>
+      <p>Cells 3–10 iterate over <code>TRAINING_UNITS</code>. Adding more subjects + <code>POOL_SUBJECTS=False</code> linearly multiplies the work; pooling collapses it back to one model.</p>
+    </div>
+  </div>
+
+  <h3>Output paths</h3>
+  <pre><code><span class="n">TIMESTAMP</span> = <span class="fn">datetime.now</span>(<span class="n">timezone.utc</span>).<span class="fn">strftime</span>(<span class="s">'%Y%m%d_%H%M%S'</span>)
+<span class="n">RUN_ROOT</span>  = <span class="n">ARTIFACT_ROOT</span>.<span class="fn">with_name</span>(<span class="s">f'{RUN_NAME}_{TIMESTAMP}'</span>)
+<span class="n">RUN_ROOT</span>.<span class="fn">mkdir</span>(parents=<span class="k">True</span>, exist_ok=<span class="k">True</span>)
+
+<span class="k">def</span> <span class="fn">unit_dir</span>(unit):  <span class="k">return</span> <span class="n">RUN_ROOT</span> / unit.label
+<span class="k">def</span> <span class="fn">seed_dir</span>(unit, seed):
+    <span class="n">d</span> = <span class="fn">unit_dir</span>(unit) / <span class="s">f'seed_{seed}'</span>
+    <span class="n">d</span>.<span class="fn">mkdir</span>(parents=<span class="k">True</span>, exist_ok=<span class="k">True</span>)
+    <span class="k">if</span> <span class="n">SAVE_PROBE_ATTENTION</span>:
+        (<span class="n">d</span> / <span class="s">'attention'</span>).<span class="fn">mkdir</span>(exist_ok=<span class="k">True</span>)
+    <span class="k">return</span> <span class="n">d</span></code></pre>
+  <p>The timestamp on <code>RUN_ROOT</code> guarantees reruns don't collide. Directory tree:</p>
+  <pre><code>data/runs/dt-vanilla-pi-cm016_20260525_120000/
+    subject_CM016/
+        seed_0/
+            run_config.json
+            curves.parquet
+            model_best.pt
+            acq_inference.parquet
+            acq_trajectory.parquet
+            acq_trial_configs.json
+            probes.parquet
+            probe_trajectory.parquet
+            probes_trial_configs.json
+            attention/
+                probe_PI+VC_f2_novel_route_temp_det.pt
+                ...
+        seed_1/  ... seed_N-1/
+    pipeline_results.parquet
+    probe_aggregate.parquet
+    acq_aggregate.parquet
+    training_aggregate.parquet
+    figures/
+        training_curves.png
+        ...
+</code></pre>
+</section>
+
+<!-- =====================================================================
+     CELL 3: LOAD YOKED + RTG + GLOBALS
+===================================================================== -->
+<section class="cell" id="cell-3">
+  <h2><span class="num">3.</span>Load yoked data + compute RTG + derive run-level constants</h2>
+  <p class="role">The data-pipeline heart of the notebook. Loads the encoder lookup, joins yoked actions to subject metadata, applies canonical-frame rotation, computes per-step RTG, and fills in the four <code>None</code>s from Cell 1.</p>
+
+  <h3>(a) State encoder lookup</h3>
+  <pre><code><span class="k">if</span> <span class="n">ENCODER_TYPE</span> == <span class="s">'pose_visual'</span>:
+    <span class="n">npz</span> = <span class="fn">np.load</span>(<span class="n">REPO_ROOT</span> / <span class="s">'data/lookups/pose_visual.npz'</span>)
+    <span class="n">STATE_LOOKUP</span> = <span class="n">npz</span>[<span class="s">'embeddings'</span>]            <span class="c"># (295, 60) float32</span>
+    <span class="n">label_to_row</span> = {<span class="n">lbl</span>: <span class="fn">int</span>(<span class="n">npz</span>[<span class="s">'pose_to_idx'</span>][<span class="n">i</span>])
+                    <span class="k">for</span> <span class="n">i</span>, <span class="n">lbl</span> <span class="k">in</span> <span class="fn">enumerate</span>(<span class="n">npz</span>[<span class="s">'pose_labels'</span>])}
+<span class="k">elif</span> <span class="n">ENCODER_TYPE</span> == <span class="s">'grid_cell'</span>:
+    ...
+<span class="k">elif</span> <span class="n">ENCODER_TYPE</span> == <span class="s">'image_cnn'</span>:
+    ...</code></pre>
+  <p>Each encoder type loads a different npz with a different schema. <code>STATE_LOOKUP</code> is the array fed into the model's frozen <code>nn.Embedding.from_pretrained</code> (for <code>pose_visual</code>/<code>grid_cell</code>) or the trainable <code>ImageCNNEncoder</code> (for <code>image_cnn</code>). <code>label_to_row</code> converts the env-emitted pose label string into a row index.</p>
+
+  <div class="callout warn">
+    <span class="label">Pitfall</span>
+    Early drafts used <code>next(iter(npz.files))</code> to grab "the array" — but the first key in each lookup is <code>pose_labels</code> (a string array), not the embeddings. Cell 3 now uses an explicit key per encoder type and ends with schema assertions that fail loudly if anything regresses.
+  </div>
+
+  <h3>(b) Subject filter via join</h3>
+  <pre><code><span class="n">sessions_df</span> = <span class="fn">pd.read_parquet</span>(<span class="n">REPO_ROOT</span> / <span class="s">'data/yoked/dataset/sessions.parquet'</span>)
+<span class="n">actions_df</span>  = <span class="fn">pd.read_parquet</span>(<span class="n">REPO_ROOT</span> / <span class="s">'data/yoked/dataset/actions_real_pretrial.parquet'</span>)
+<span class="c"># Join path: actions.session_id → sessions.subject_id → subjects.subject_name</span>
+<span class="n">sess_lookup</span> = <span class="n">sessions_df</span>[[<span class="s">'session_id'</span>, <span class="s">'subject_id'</span>, ...]]
+<span class="n">actions_df</span>  = <span class="n">actions_df</span>.<span class="fn">merge</span>(<span class="n">sess_lookup</span>, on=<span class="s">'session_id'</span>)
+<span class="n">actions_df</span>  = <span class="n">actions_df</span>.<span class="fn">merge</span>(<span class="n">subjects_df</span>, on=<span class="s">'subject_id'</span>)</code></pre>
+  <div class="callout warn">
+    <span class="label">Schema gotcha</span>
+    <code>actions_real_pretrial.parquet</code> has no <code>subject_name</code> column. Naïve <code>actions_df[actions_df['subject_name'].isin(SUBJECTS)]</code> raises <code>KeyError</code>. The two-hop join above is the right path.
+  </div>
+
+  <h3>(c) Canonical-frame rotation</h3>
+  <p>PI / PI+VC subjects are rotated so the cue lands at North in every session — matching the rat's internal (path-integration) frame. VC subjects skip rotation because their cue rotates across sessions <em>by design</em> (rotating cue is the VC training signal).</p>
+  <pre><code><span class="n">ROTATE_TO_CANONICAL</span> = <span class="n">GROUP_ALIASES</span>[<span class="n">TRAINING_GROUP</span>] <span class="k">in</span> (<span class="s">'PI'</span>, <span class="s">'PI+VC'</span>, <span class="s">'PI+VC_f1'</span>)
+
+<span class="c"># Per-session: n_rotations = cue index of first trial (0=N → 0 rotations, 1=E → 1, ...)</span>
+<span class="k">def</span> <span class="fn">_compute_n_rotations</span>(trial_configs):
+    <span class="n">cues</span> = <span class="fn">set</span>(<span class="n">tc</span>[<span class="n">1</span>] <span class="k">for</span> <span class="n">tc</span> <span class="k">in</span> trial_configs)
+    <span class="k">if</span> <span class="fn">len</span>(<span class="n">cues</span>) != <span class="n">1</span>:
+        <span class="k">return</span> <span class="k">None</span>          <span class="c"># multi-cue session — defensively drop</span>
+    <span class="k">return</span> <span class="fn">list</span>(<span class="n">cues</span>)[<span class="n">0</span>]</code></pre>
+
+  <h4>Rotation formulas (single 90° CCW step, screen y-down)</h4>
+  <table>
+    <thead><tr><th>field</th><th>transform</th></tr></thead>
+    <tbody>
+      <tr><td><code>(x, y)</code></td><td><code>(y, 12 − x)</code></td></tr>
+      <tr><td><code>direction</code></td><td><code>(d − n_rotations) % 4</code></td></tr>
+      <tr><td>arm / cue letter</td><td><code>n → w → s → e → n</code> (one CCW step on compass)</td></tr>
+      <tr><td>goal corner</td><td><code>ne → nw → sw → se → ne</code></td></tr>
+      <tr><td>pose_label suffix</td><td>rotate the (x, y, d) numerals</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <span class="label">Direction sign correction</span>
+    The legacy implementation in <code>corner-maze-rl-legacy/yoking/rotate_to_canonical.py:62</code> uses <code>(d + n) % 4</code>. <strong>That's wrong</strong> for <code>n ∈ {1, 3}</code> — only accidentally correct for <code>n=2</code> due to 180° symmetry. We use <code>(d − n) % 4</code>. Empirical proof: agent at (8, 6) facing E (d=0) walks forward to (9, 6). One CCW rotation maps (8,6)→(6,4) and (9,6)→(6,3) — a step in −y = direction N = 3. Legacy gives <code>(0+1)%4 = 1 = S</code> (180° off). Corrected formula gives <code>3 = N</code>. The legacy bug stayed buried because its validation only checked rewarded positions, never directions.
+  </div>
+
+  <h4>What rotation actually does, per encoder</h4>
+  <table>
+    <thead><tr><th>encoder</th><th>effect on DT input stream</th></tr></thead>
+    <tbody>
+      <tr><td><code>pose_visual</code></td><td><strong>No-op in practice</strong>. <code>pose_visual.npz</code> already collapses all 4 rotational variants of any pose to the same embedding row (4536→295 indirection). Verified across 491K rows: every (orig, rotated) pair maps to the same <code>state_idx</code>.</td></tr>
+      <tr><td><code>image_cnn</code></td><td><strong>No-op</strong>. <code>minigrid_views.npz</code> views are byte-identical across rotational equivalents (the 13×13 maze is 4-fold rotationally symmetric).</td></tr>
+      <tr><td><code>grid_cell</code></td><td><strong>Substantive</strong>. <code>grid_cells_60d.npz</code> is indexed by absolute <code>(x, y, d)</code> — same physical pose under rotation maps to a different 60D vector. Rotation is essential here.</td></tr>
+    </tbody>
+  </table>
+  <p>We rotate uniformly anyway as a defensive choice — the rotation is cheap and we don't want to remember which encoders need it.</p>
+
+  <h3>(d) Per-trial timestep — deliberate deviation from kzl</h3>
+  <pre><code><span class="c"># Trial-start rule: t starts a trial iff t == 0 OR a2r[t] > a2r[t-1]</span>
+<span class="n">trial_start_mask</span> = <span class="fn">np.concatenate</span>([[<span class="k">True</span>], <span class="n">a2r</span>[<span class="n">1</span>:] &gt; <span class="n">a2r</span>[:-<span class="n">1</span>]])
+<span class="n">trial_id</span>          = <span class="fn">np.cumsum</span>(<span class="n">trial_start_mask</span>) - <span class="n">1</span>
+<span class="n">trial_timestep</span>    = <span class="fn">np.arange</span>(<span class="n">L</span>) - <span class="n">trial_start_positions</span>[<span class="n">trial_id</span>]</code></pre>
+  <p>kzl's <code>embed_t</code> indexes by step <em>within episode</em> (their MuJoCo episodes are ≤1000 steps). For our 2000-3000-step rat sessions that's the wrong unit:</p>
+  <ul>
+    <li>Per-session timestep puts almost zero samples on high positions (only sessions long enough to reach step 1500 train <code>embed_t[1500]</code>).</li>
+    <li>Per-trial timestep puts ~32 trials/session × N sessions ≈ 100s of samples on every <code>embed_t[i]</code> for <code>i &lt; typical_trial_len</code>.</li>
+    <li><code>MAX_EP_LEN</code> shrinks from ~3000 to ~250 → embedding table is ~12× smaller.</li>
+    <li><code>embed_t[5]</code> consistently means "5 steps into a trial," not "5 steps into wherever this session started."</li>
+  </ul>
+
+  <h3>(e) Per-step RTG (analytical, per-trial-relative)</h3>
+  <pre><code><span class="n">rtg</span> = <span class="n">COST.terminal_reward</span> - <span class="n">COST.step_cost</span> * <span class="n">a2r</span>     <span class="c"># shape (L,) float32</span></code></pre>
+  <p>For each step, RTG = <code>R − c · actions_to_reward</code>. The signal climbs from <code>R − c·L_trial</code> at trial start to <code>R</code> at the reward step, then jumps back down at the next trial. <strong>Not</strong> a sum of future rewards (that's the MuJoCo definition kzl uses). This is an analytical training signal — same constants used at inference (Cell 7) for re-anchoring + smooth-climb.</p>
+
+  <h3>(f) Derive the four globals</h3>
+  <table>
+    <thead><tr><th>constant</th><th>derived from</th></tr></thead>
+    <tbody>
+      <tr><td><code>EXPECTED_OPT_LEN</code></td><td><code>median(trial_start_a2r)</code> over <code>LAST_N_ACQ_FOR_RTG</code> late-acq sessions per subject</td></tr>
+      <tr><td><code>INFERENCE_RTG</code></td><td><code>R − c · EXPECTED_OPT_LEN</code> (~0.941 for CM016)</td></tr>
+      <tr><td><code>MAX_EP_LEN</code></td><td><code>max(trial_length)</code> rounded up to next 50 — sizes the learned timestep embedding</td></tr>
+      <tr><td><code>WARMUP_STEPS</code></td><td>~5% of total optimizer steps, clamped to <code>[100, 10000]</code></td></tr>
+    </tbody>
+  </table>
+  <p>These get assigned into Cell 1's global names so downstream cells can read them as if they were defined in Cell 1.</p>
+
+  <h3>(g) <code>sessions_for(subjects)</code> — the dataset entry point Cell 4 calls</h3>
+  <p>Returns a list of dicts (one per session) for the requested subjects, each containing the per-step arrays <code>state_idx</code>, <code>action</code>, <code>rtg</code>, <code>trial_timestep</code> plus <code>session_id</code> and <code>length</code>. Pre-filtered to sessions with at least one full window.</p>
+</section>
+
+<!-- =====================================================================
+     CELL 4: RatWindowDataset
+===================================================================== -->
+<section class="cell" id="cell-4">
+  <h2><span class="num">4.</span><code>RatWindowDataset</code> + DataLoaders</h2>
+  <p class="role">Slides a length-K window over each session's per-step arrays. Windows never cross session boundaries; within a window, multiple trials can appear.</p>
+
+  <h3>The dataset</h3>
+  <pre><code><span class="k">class</span> <span class="fn">RatWindowDataset</span>(<span class="n">Dataset</span>):
+    <span class="k">def</span> <span class="fn">__init__</span>(self, sessions, K):
+        self.K = K
+        self.sessions = sessions
+        <span class="c"># Pre-compute (session_idx, start_step) for every valid window position.</span>
+        self.index = []
+        <span class="k">for</span> <span class="n">i</span>, <span class="n">s</span> <span class="k">in</span> <span class="fn">enumerate</span>(sessions):
+            <span class="n">n_win</span> = <span class="fn">max</span>(<span class="n">0</span>, <span class="n">s</span>[<span class="s">'length'</span>] - <span class="n">K</span> + <span class="n">1</span>)
+            self.index.<span class="fn">extend</span>((<span class="n">i</span>, <span class="n">start</span>) <span class="k">for</span> <span class="n">start</span> <span class="k">in</span> <span class="fn">range</span>(<span class="n">n_win</span>))
+
+    <span class="k">def</span> <span class="fn">__getitem__</span>(self, i):
+        <span class="n">sess_i</span>, <span class="n">start</span> = self.index[i]
+        <span class="n">sess</span> = self.sessions[<span class="n">sess_i</span>]
+        <span class="n">end</span> = <span class="n">start</span> + self.K
+        <span class="k">return</span> {
+            <span class="s">'state_idx'</span>:      <span class="fn">torch.from_numpy</span>(<span class="n">sess</span>[<span class="s">'state_idx'</span>][<span class="n">start</span>:<span class="n">end</span>]).<span class="fn">long</span>(),
+            <span class="s">'action'</span>:         <span class="fn">torch.from_numpy</span>(<span class="n">sess</span>[<span class="s">'action'</span>][<span class="n">start</span>:<span class="n">end</span>]).<span class="fn">long</span>(),
+            <span class="s">'rtg'</span>:            <span class="fn">torch.from_numpy</span>(<span class="n">sess</span>[<span class="s">'rtg'</span>][<span class="n">start</span>:<span class="n">end</span>]),
+            <span class="s">'trial_timestep'</span>: <span class="fn">torch.from_numpy</span>(<span class="n">sess</span>[<span class="s">'trial_timestep'</span>][<span class="n">start</span>:<span class="n">end</span>]).<span class="fn">long</span>(),
+        }</code></pre>
+
+  <h4>Per batch element</h4>
+  <table>
+    <thead><tr><th>tensor</th><th>shape</th><th>dtype</th><th>note</th></tr></thead>
+    <tbody>
+      <tr><td><code>state_idx</code></td><td>(K,)</td><td>int64</td><td>index into STATE_LOOKUP; expanded in the model</td></tr>
+      <tr><td><code>action</code></td><td>(K,)</td><td>int64</td><td>action id ∈ [0, NUM_ACTIONS)</td></tr>
+      <tr><td><code>rtg</code></td><td>(K,)</td><td>float32</td><td>return-to-go signal</td></tr>
+      <tr><td><code>trial_timestep</code></td><td>(K,)</td><td>int64</td><td>per-trial step counter, feeds <code>embed_t</code></td></tr>
+    </tbody>
+  </table>
+  <p>State lookup expansion happens <strong>in the model</strong>, not here — keeps the dataset small (int32 indices, not 60D vectors per step).</p>
+
+  <h3><code>make_loaders(unit, seed)</code></h3>
+  <pre><code><span class="k">def</span> <span class="fn">make_loaders</span>(unit, seed):
+    <span class="n">sessions</span> = <span class="fn">sessions_for</span>(unit.subjects)
+    <span class="n">usable</span>   = [<span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="k">in</span> <span class="n">sessions</span> <span class="k">if</span> <span class="n">s</span>[<span class="s">'length'</span>] &gt;= <span class="n">K</span>]
+    <span class="n">full_ds</span>  = <span class="fn">RatWindowDataset</span>(<span class="n">usable</span>, <span class="n">K</span>)
+    <span class="n">n_val</span>    = <span class="fn">max</span>(<span class="n">1</span>, <span class="fn">int</span>(<span class="fn">len</span>(<span class="n">full_ds</span>) * <span class="n">VAL_FRAC</span>))
+    <span class="n">n_train</span>  = <span class="fn">len</span>(<span class="n">full_ds</span>) - <span class="n">n_val</span>
+
+    <span class="c"># Two distinct generators so split and shuffle don't share state</span>
+    <span class="n">g_split</span>   = <span class="fn">torch.Generator</span>().<span class="fn">manual_seed</span>(<span class="n">seed</span>)
+    <span class="n">g_shuffle</span> = <span class="fn">torch.Generator</span>().<span class="fn">manual_seed</span>(<span class="n">seed</span> + <span class="n">10_000</span>)
+    <span class="n">train_ds</span>, <span class="n">val_ds</span> = <span class="fn">random_split</span>(<span class="n">full_ds</span>, [<span class="n">n_train</span>, <span class="n">n_val</span>], generator=<span class="n">g_split</span>)
+
+    <span class="k">return</span> (
+        <span class="fn">DataLoader</span>(<span class="n">train_ds</span>, batch_size=<span class="n">BATCH_SIZE</span>, shuffle=<span class="k">True</span>,  drop_last=<span class="k">True</span>,
+                   generator=<span class="n">g_shuffle</span>, ...),
+        <span class="fn">DataLoader</span>(<span class="n">val_ds</span>,   batch_size=<span class="n">BATCH_SIZE</span>, shuffle=<span class="k">False</span>, drop_last=<span class="k">False</span>, ...),
+        <span class="n">full_ds</span>,
+    )</code></pre>
+
+  <div class="callout">
+    <span class="label">Split semantics</span>
+    Random window split (kzl-style). Train and val windows from the same session can overlap by K−1 steps — the val loss is "next-action prediction in a region the model has nearly seen." Useful for hyperparameter tuning + overfitting detection, but <strong>not</strong> a true held-out benchmark. The honest generalization signal comes from the env-side probes (Cell 9).
+  </div>
+
+  <h3>Reproducibility</h3>
+  <p>The two generators are seeded from the same <code>seed</code> with different offsets so the split <em>and</em> the in-epoch shuffle order are both reproducible per <code>(unit, seed)</code>. The smoke test at the bottom of the cell verifies: running <code>make_loaders(unit, 0)</code> twice produces identical first batches.</p>
+</section>
+
+<!-- =====================================================================
+     CELL 5: DT MODEL
+===================================================================== -->
+<section class="cell" id="cell-5">
+  <h2><span class="num">5.</span>Build DT model (kzl-faithful port)</h2>
+  <p class="role">Three components composed: state encoder factory, custom GPT2 transformer body, and the <code>DTEmbedding</code> that interleaves (R, s, a) tokens per step.</p>
+
+  <h3>State encoder factory</h3>
+  <pre><code><span class="k">def</span> <span class="fn">make_state_encoder</span>(encoder_type, state_lookup, hidden_dim, freeze):
+    <span class="k">if</span> encoder_type <span class="k">in</span> (<span class="s">'pose_visual'</span>, <span class="s">'grid_cell'</span>):
+        <span class="n">w</span> = <span class="fn">torch.from_numpy</span>(state_lookup).<span class="fn">float</span>()
+        <span class="k">return</span> <span class="fn">nn.Embedding.from_pretrained</span>(<span class="n">w</span>, freeze=freeze)
+    <span class="k">elif</span> encoder_type == <span class="s">'image_cnn'</span>:
+        <span class="k">return</span> <span class="fn">ImageCNNEncoder</span>(state_lookup, hidden_dim)</code></pre>
+  <p>For frozen lookups the encoder is just an <code>nn.Embedding</code> initialized from the npz; gradients don't flow through it. For <code>image_cnn</code> we instantiate the trainable CNN (3→16 conv → flatten → Linear → 60D).</p>
+
+  <h3>Causal self-attention</h3>
+  <div class="lbl">
+    <pre><code><span class="k">class</span> <span class="fn">CausalSelfAttention</span>(<span class="n">nn.Module</span>):
+    <span class="k">def</span> <span class="fn">__init__</span>(self, d_model, n_heads, dropout):
+        self.qkv      = <span class="fn">nn.Linear</span>(d_model, <span class="n">3</span> * d_model)
+        self.out_proj = <span class="fn">nn.Linear</span>(d_model, d_model)
+        ...
+
+    <span class="k">def</span> <span class="fn">forward</span>(self, x, return_attn=<span class="k">False</span>):
+        <span class="n">B</span>, <span class="n">T</span>, <span class="n">C</span> = x.shape
+        <span class="n">q</span>, <span class="n">k</span>, <span class="n">v</span> = self.qkv(x).<span class="fn">chunk</span>(<span class="n">3</span>, dim=-<span class="n">1</span>)
+        <span class="n">q</span> = <span class="n">q</span>.<span class="fn">view</span>(<span class="n">B</span>, <span class="n">T</span>, self.n_heads, self.d_head).<span class="fn">transpose</span>(<span class="n">1</span>, <span class="n">2</span>)
+        <span class="n">k</span> = <span class="n">k</span>.<span class="fn">view</span>(<span class="n">B</span>, <span class="n">T</span>, self.n_heads, self.d_head).<span class="fn">transpose</span>(<span class="n">1</span>, <span class="n">2</span>)
+        <span class="n">v</span> = <span class="n">v</span>.<span class="fn">view</span>(<span class="n">B</span>, <span class="n">T</span>, self.n_heads, self.d_head).<span class="fn">transpose</span>(<span class="n">1</span>, <span class="n">2</span>)
+        <span class="n">scores</span> = (<span class="n">q</span> @ <span class="n">k</span>.<span class="fn">transpose</span>(-<span class="n">2</span>, -<span class="n">1</span>)) / (self.d_head ** <span class="n">0.5</span>)
+        <span class="n">causal_mask</span> = <span class="fn">torch.triu</span>(<span class="fn">torch.ones</span>(<span class="n">T</span>, <span class="n">T</span>, dtype=<span class="fn">torch.bool</span>), diagonal=<span class="n">1</span>)
+        <span class="n">scores</span> = <span class="n">scores</span>.<span class="fn">masked_fill</span>(<span class="n">causal_mask</span>, <span class="fn">float</span>(<span class="s">'-inf'</span>))
+        <span class="n">attn</span> = <span class="fn">F.softmax</span>(<span class="n">scores</span>, dim=-<span class="n">1</span>)
+        <span class="n">out</span> = (<span class="n">attn</span> @ <span class="n">v</span>).<span class="fn">transpose</span>(<span class="n">1</span>, <span class="n">2</span>).<span class="fn">contiguous</span>().<span class="fn">view</span>(<span class="n">B</span>, <span class="n">T</span>, <span class="n">C</span>)
+        <span class="k">return</span> (self.<span class="fn">resid_drop</span>(self.<span class="fn">out_proj</span>(<span class="n">out</span>)),
+                <span class="n">attn</span> <span class="k">if</span> return_attn <span class="k">else</span> <span class="k">None</span>)</code></pre>
+    <div class="note">
+      <p><strong>Why hand-roll vs HuggingFace?</strong></p>
+      <ul>
+        <li><strong>No internal positional embedding</strong>. kzl zeroes out HF's <code>wpe</code> layer; we just omit it. Position info enters only via <code>embed_t</code>.</li>
+        <li><strong>Attention extraction</strong> for Cell 13 diagnostics — returning <code>attn</code> as a tensor is trivial here, requires hooks with HF.</li>
+        <li><strong>No HF dep</strong> — saves ~700MB of <code>transformers</code> wheel.</li>
+      </ul>
+      <p>The mask is built fresh from the sequence length T inside the forward call — so variable-length T at inference (Cell 7) works without padding.</p>
+    </div>
+  </div>
+
+  <h3>Block + body</h3>
+  <pre><code><span class="k">class</span> <span class="fn">GPT2Block</span>(<span class="n">nn.Module</span>):
+    <span class="k">def</span> <span class="fn">forward</span>(self, x, return_attn=<span class="k">False</span>):
+        <span class="n">a</span>, attn = self.<span class="fn">attn</span>(self.<span class="fn">ln_1</span>(x), return_attn=return_attn)
+        x = x + a
+        x = x + self.<span class="fn">mlp</span>(self.<span class="fn">ln_2</span>(x))
+        <span class="k">return</span> x, attn</code></pre>
+  <p>Pre-LayerNorm pattern (LN before attn / LN before MLP). MLP is 4× expansion with GELU.</p>
+
+  <h3>DTEmbedding — token interleave</h3>
+  <pre><code><span class="k">class</span> <span class="fn">DTEmbedding</span>(<span class="n">nn.Module</span>):
+    <span class="k">def</span> <span class="fn">forward</span>(self, rtg, state_idx, action, trial_timestep):
+        <span class="n">B</span>, <span class="n">K</span> = rtg.shape
+        <span class="n">t_e</span> = self.<span class="fn">embed_t</span>(trial_timestep)                       <span class="c"># (B, K, H)</span>
+        <span class="n">r_e</span> = self.<span class="fn">embed_R</span>(rtg.<span class="fn">unsqueeze</span>(-<span class="n">1</span>)) + <span class="n">t_e</span>           <span class="c"># (B, K, H)</span>
+        <span class="n">s_e</span> = self.<span class="fn">state_encoder</span>(state_idx)  + <span class="n">t_e</span>           <span class="c"># (B, K, H)</span>
+        <span class="n">a_e</span> = self.<span class="fn">embed_a</span>(action)           + <span class="n">t_e</span>           <span class="c"># (B, K, H)</span>
+        <span class="c"># Interleave along a new axis, flatten to (B, 3K, H)</span>
+        <span class="n">stacked</span> = <span class="fn">torch.stack</span>([<span class="n">r_e</span>, <span class="n">s_e</span>, <span class="n">a_e</span>], dim=<span class="n">2</span>)            <span class="c"># (B, K, 3, H)</span>
+        <span class="n">stacked</span> = <span class="n">stacked</span>.<span class="fn">reshape</span>(<span class="n">B</span>, <span class="n">3</span> * <span class="n">K</span>, -<span class="n">1</span>)                <span class="c"># (B, 3K, H)</span>
+        <span class="k">return</span> self.<span class="fn">drop</span>(self.<span class="fn">embed_ln</span>(<span class="n">stacked</span>))</code></pre>
+  <p>The <code>torch.stack(..., dim=2)</code> followed by <code>reshape(B, 3*K, -1)</code> interleaves correctly:</p>
+  <pre><code>position 0 → R₀
+position 1 → s₀
+position 2 → a₀
+position 3 → R₁
+position 4 → s₁
+position 5 → a₁
+...</code></pre>
+  <p>Matches kzl token order. <code>embed_t</code> is added to all three modality streams so each token at time-step k carries the same positional anchor.</p>
+
+  <h3>Action head</h3>
+  <pre><code><span class="k">def</span> <span class="fn">forward</span>(self, rtg, state_idx, action, trial_timestep, return_attn=<span class="k">False</span>):
+    x = self.<span class="fn">embedding</span>(rtg, state_idx, action, trial_timestep)    <span class="c"># (B, 3K, H)</span>
+    x, attns = self.<span class="fn">body</span>(x, return_attn=return_attn)                <span class="c"># (B, 3K, H)</span>
+    x_state = x[:, <span class="n">1</span>::<span class="n">3</span>, :]                                            <span class="c"># (B, K, H) — state tokens at 1, 4, 7, ...</span>
+    logits  = self.<span class="fn">action_head</span>(x_state)                              <span class="c"># (B, K, NUM_ACTIONS)</span>
+    <span class="k">return</span> (logits, attns) <span class="k">if</span> return_attn <span class="k">else</span> logits</code></pre>
+  <p>The action prediction reads from <strong>state-token positions</strong>. With the causal mask, the state token at step k has seen <code>R[0..k], s[0..k], a[0..k-1]</code> — exactly the right context for predicting <code>a[k]</code>. CE loss in Cell 6 supervises every K position in each window.</p>
+
+  <h3>Parameter accounting (default config)</h3>
+  <ul>
+    <li><code>embed_t</code> (<code>MAX_EP_LEN × HIDDEN_DIM</code>) — ~250 × 60 = 15 K params</li>
+    <li>Body: <code>N_LAYERS × 12 × HIDDEN_DIM²</code> ≈ 3 × 12 × 60² = 130 K params</li>
+    <li>State encoder (pose_visual): frozen, 295 × 60 = 17.7 K params (not counted in trainable)</li>
+    <li>Trainable total: ~145 K params (~0.6 MB fp32)</li>
+  </ul>
+  <p>The smoke test at the bottom of the cell prints exact counts after instantiation.</p>
+</section>
+
+<!-- =====================================================================
+     CELL 6: TRAINING LOOP
+===================================================================== -->
+<section class="cell" id="cell-6">
+  <h2><span class="num">6.</span>Training loop</h2>
+  <p class="role"><code>train_one_unit(unit, seed, train_loader, val_loader, full_ds, seed_dir, n_epochs=None)</code> — runs train + val + early-stop for one (unit, seed). Returns <code>(model, history_df)</code>.</p>
+
+  <h3><code>_run_config_dict</code></h3>
+  <p>Snapshots every hparam + run identity into a JSON-serializable dict for <code>run_config.json</code>. Written once at the start so the model + curves can always be traced back to their configuration.</p>
+
+  <h3>Per-batch step</h3>
+  <pre><code><span class="k">for</span> batch_idx, batch <span class="k">in</span> <span class="fn">enumerate</span>(it):
+    batch = {k: v.<span class="fn">to</span>(<span class="n">DEVICE</span>, non_blocking=<span class="k">True</span>) <span class="k">for</span> k, v <span class="k">in</span> batch.<span class="fn">items</span>()}
+    logits = <span class="fn">model</span>(
+        rtg=batch[<span class="s">'rtg'</span>],
+        state_idx=batch[<span class="s">'state_idx'</span>],
+        action=batch[<span class="s">'action'</span>],
+        trial_timestep=batch[<span class="s">'trial_timestep'</span>],
+    )
+    loss = <span class="fn">F.cross_entropy</span>(logits.<span class="fn">reshape</span>(-<span class="n">1</span>, <span class="n">NUM_ACTIONS</span>),
+                            batch[<span class="s">'action'</span>].<span class="fn">reshape</span>(-<span class="n">1</span>))
+
+    optimizer.<span class="fn">zero_grad</span>(set_to_none=<span class="k">True</span>)
+    loss.<span class="fn">backward</span>()
+    last_grad = <span class="fn">torch.nn.utils.clip_grad_norm_</span>(trainable, <span class="n">GRAD_CLIP</span>).<span class="fn">item</span>()
+    optimizer.<span class="fn">step</span>()
+    scheduler.<span class="fn">step</span>()
+    global_step += <span class="n">1</span></code></pre>
+  <ol>
+    <li>Move the batch to device.</li>
+    <li>Forward → action logits <code>(B, K, NUM_ACTIONS)</code>.</li>
+    <li>CE loss against the rat's actions over <em>all</em> K positions in the window. The autoregressive structure means token k's loss is supervised by <code>action[k]</code> and gradients flow back through the (R, s, a) history before it.</li>
+    <li>Backward, clip grad norm at <code>GRAD_CLIP=0.25</code>, AdamW step, LR scheduler step (linear warmup over <code>WARMUP_STEPS</code>).</li>
+  </ol>
+
+  <h3>Per-epoch flow</h3>
+  <pre><code><span class="k">for</span> epoch <span class="k">in</span> <span class="fn">range</span>(<span class="n">1</span>, n_epochs + <span class="n">1</span>):
+    model.<span class="fn">train</span>(); <span class="c"># ... train loop above</span>
+    model.<span class="fn">eval</span>()
+    <span class="k">with</span> <span class="fn">torch.no_grad</span>(): <span class="c"># ... val loop, same shape, no backward</span>
+
+    is_best = val_loss &lt; best_val_loss
+    <span class="k">if</span> is_best:
+        best_val_loss = val_loss
+        best_epoch    = epoch
+        patience      = <span class="n">0</span>
+        <span class="fn">torch.save</span>({<span class="s">'state_dict'</span>: model.<span class="fn">state_dict</span>(), ...},
+                   seed_dir_path / <span class="s">'model_best.pt'</span>)
+    <span class="k">else</span>:
+        patience += <span class="n">1</span>
+
+    history.<span class="fn">append</span>({...})
+    <span class="fn">pd.DataFrame</span>(history).<span class="fn">to_parquet</span>(seed_dir_path / <span class="s">'curves.parquet'</span>, index=<span class="k">False</span>)
+    <span class="k">if</span> patience &gt;= <span class="n">EARLY_STOP_PATIENCE</span>:
+        <span class="k">break</span></code></pre>
+
+  <div class="callout good">
+    <span class="label">Crash-safe</span>
+    <code>curves.parquet</code> is rewritten <em>every epoch</em>. If the kernel dies mid-training (OOM, interrupt), the file on disk is current up to the last completed epoch. No mid-run buffering.
+  </div>
+
+  <h3>Artifacts written to <code>seed_dir/</code></h3>
+  <table>
+    <thead><tr><th>file</th><th>contents</th><th>always written?</th></tr></thead>
+    <tbody>
+      <tr><td><code>run_config.json</code></td><td>frozen hparams + data shapes + run identity</td><td>✓</td></tr>
+      <tr><td><code>curves.parquet</code></td><td>one row per epoch (train/val loss+acc, lr, grad_norm, epoch_sec, is_best)</td><td>✓</td></tr>
+      <tr><td><code>model_best.pt</code></td><td>state_dict at the lowest-val-loss epoch</td><td>✓</td></tr>
+      <tr><td><code>per_batch_loss.parquet</code></td><td>one row per optimizer step</td><td>if <code>SAVE_PER_BATCH_LOSS</code></td></tr>
+      <tr><td><code>attention/epoch_NNN_best.pt</code></td><td>val-batch attention at each new-best epoch</td><td>if <code>SAVE_ATTENTION_PER_EPOCH</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Smoke test</h3>
+  <p>The bottom of the cell runs a 2-epoch training pass on <code>TRAINING_UNITS[0]</code> seed 0 — populates <code>_smoke_model</code>, <code>_smoke_seed_dir</code>, etc. that Cells 7-9 reuse. ~30 seconds on MPS. Lets you incrementally verify each cell as you build.</p>
+</section>
+
+<!-- =====================================================================
+     CELL 7: ENV INFERENCE HELPER
+===================================================================== -->
+<section class="cell" id="cell-7">
+  <h2><span class="num">7.</span>Env-side autoregressive inference helper</h2>
+  <p class="role"><code>run_dt_episode(model, session_type, target_rtg, ...)</code> — runs one episode of <code>CornerMazeEnv</code> with the trained DT as policy. Used by Cell 8 and Cell 9.</p>
+
+  <h3>Cue-N anchoring (<code>_trained_goal_for_subject</code>)</h3>
+  <pre><code><span class="k">def</span> <span class="fn">_trained_goal_for_subject</span>(subject):
+    ori = _SUBJECT_META[subject][<span class="s">'cue_goal_orientation'</span>]
+    <span class="k">return</span> ori.<span class="fn">split</span>(<span class="s">'/'</span>)[<span class="n">1</span>]</code></pre>
+  <p>For CM016 (<code>'N/SE'</code>), returns <code>'SE'</code>. The env's trial generator interprets <code>start_goal_location='SE'</code> as <code>gli=1</code>, which (combined with <code>cue_goal_orientation='N/SE'</code>) places <strong>cue at N, goal at SE</strong> — the canonical training frame.</p>
+  <p>Why this anchor exists: the rat's training data was rotated to canonical-N (Cell 3). To preserve that frame at inference, the env must run canonical-frame trials. Without this anchor the env picks a random gli and trial_configs are in arbitrary rotational orientations the DT didn't train on.</p>
+
+  <h3><code>_env_state_idx</code></h3>
+  <pre><code><span class="k">def</span> <span class="fn">_env_state_idx</span>(env):
+    <span class="k">if</span> <span class="n">ENCODER_TYPE</span> == <span class="s">'grid_cell'</span>:
+        x, y = env.agent_pos; d = env.agent_dir
+        <span class="k">return</span> <span class="fn">int</span>(((x - <span class="n">1</span>) * <span class="n">N_Y</span> + (y - <span class="n">1</span>)) * <span class="n">N_D</span> + d)
+    <span class="k">return</span> <span class="fn">int</span>(label_to_row[env.<span class="fn">get_pose_label</span>()])</code></pre>
+  <p>Per-step state index. For <code>pose_visual</code> / <code>image_cnn</code>, the npz's rotational collapse means we don't need to rotate the env's pose back to canonical — the lookup absorbs it. For <code>grid_cell</code>, this currently doesn't rotate either, which is a known gap if you ever switch encoders (see <code>docs/10_vanilla_dt.md</code> §9.1).</p>
+
+  <h3>The episode loop</h3>
+  <pre><code><span class="k">for</span> t <span class="k">in</span> <span class="fn">range</span>(max_steps):
+    <span class="n">ctx_K</span> = <span class="fn">min</span>(<span class="fn">len</span>(rtg_buf), <span class="n">K</span>)
+    <span class="c"># slice the rolling buffers to the last ctx_K entries, batch them up</span>
+    rtg_t   = <span class="fn">torch.tensor</span>(rtg_buf[-<span class="n">ctx_K</span>:],   ...).<span class="fn">unsqueeze</span>(<span class="n">0</span>)
+    state_t = <span class="fn">torch.tensor</span>(state_buf[-<span class="n">ctx_K</span>:], ...).<span class="fn">unsqueeze</span>(<span class="n">0</span>)
+    action_t= <span class="fn">torch.tensor</span>(action_buf[-(<span class="n">ctx_K</span>-<span class="n">1</span>):] + [<span class="n">0</span>], ...).<span class="fn">unsqueeze</span>(<span class="n">0</span>)
+    tt_t    = <span class="fn">torch.tensor</span>(tt_buf[-<span class="n">ctx_K</span>:],    ...).<span class="fn">unsqueeze</span>(<span class="n">0</span>)
+
+    logits = <span class="fn">model</span>(rtg_t, state_t, action_t, tt_t)
+    last_logits = logits[<span class="n">0</span>, -<span class="n">1</span>, :]
+    <span class="k">if</span> deterministic: action = <span class="fn">int</span>(last_logits.<span class="fn">argmax</span>().<span class="fn">item</span>())
+    <span class="k">else</span>:             action = <span class="fn">int</span>(<span class="fn">torch.multinomial</span>(<span class="fn">torch.softmax</span>(last_logits / temperature, -<span class="n">1</span>), <span class="n">1</span>).<span class="fn">item</span>())
+
+    obs, reward, terminated, truncated, info = env.<span class="fn">step</span>(action)
+
+    new_trial_count = info.<span class="fn">get</span>(<span class="s">'trial_count'</span>, prev_trial_count) <span class="k">or</span> prev_trial_count
+    trial_just_ended = new_trial_count &gt; prev_trial_count
+    <span class="k">if</span> trial_just_ended:
+        n_trials += <span class="n">1</span>
+        next_rtg = <span class="fn">float</span>(target_rtg)        <span class="c"># re-anchor at trial boundary</span>
+        next_tt  = <span class="n">0</span>
+    <span class="k">else</span>:
+        next_rtg = rtg_buf[-<span class="n">1</span>] + <span class="n">COST.step_cost</span>   <span class="c"># smooth within-trial climb</span>
+        next_tt  = <span class="fn">min</span>(tt_buf[-<span class="n">1</span>] + <span class="n">1</span>, <span class="n">MAX_EP_LEN</span> - <span class="n">1</span>)
+    prev_trial_count = new_trial_count
+
+    <span class="c"># ... append next_state_idx, next_rtg, next_tt to buffers, log everything ...
+    <span class="k">if</span> terminated <span class="k">or</span> truncated: <span class="k">break</span></span></code></pre>
+
+  <h3>RTG management — why we ignore env reward</h3>
+  <p>Training RTG = <code>R − c·actions_to_reward</code> is an analytical per-trial signal, <strong>not</strong> a sum of future rewards. The env emits actual rewards (<code>-0.0005</code> step / <code>-0.001</code> turn / <code>+1.061</code> goal) that don't match. Using kzl's <code>next_rtg = rtg − reward</code> rule would drift the DT off its training distribution.</p>
+  <p>So we maintain RTG analytically:</p>
+  <ul>
+    <li><strong>Within a trial</strong>: <code>next_rtg = current_rtg + COST.step_cost</code>. Smooth upward drift mirroring the training-time signal.</li>
+    <li><strong>At trial boundary</strong> (detected via <code>info['trial_count']</code> incrementing): <code>next_rtg = target_rtg</code>. Re-anchor to the conditioning target (<code>INFERENCE_RTG</code> by default).</li>
+  </ul>
+
+  <h3>Variable-length context</h3>
+  <p>Steps 0..K-1 don't have a full K-token history yet. Rather than zero-padding (kzl's approach for fixed-shape input), we accept variable <code>T = 3 × ctx_K</code> where <code>ctx_K = min(t+1, K)</code>. The causal mask is built fresh inside attention from the actual T. Works because there's no internal positional embedding to be confused by shorter sequences.</p>
+  <p>The action buffer needs a <strong>placeholder</strong> for the current position (the DT hasn't predicted it yet). We append <code>0</code> as a stand-in; the causal mask ensures the model never reads it.</p>
+
+  <h3><code>_episode_to_step_rows</code></h3>
+  <p>Flattens one <code>run_dt_episode</code> log into a list of per-step row dicts ready for parquet. Key fields: <code>step, pose_label, grid_x, grid_y, direction, state_idx, action, env_reward, rtg_before_action, trial_id, trial_timestep, trial_tag</code> — plus whatever provenance the caller passes in.</p>
+</section>
+
+<!-- =====================================================================
+     CELL 8: ACQUISITION SANITY CHECK
+===================================================================== -->
+<section class="cell" id="cell-8">
+  <h2><span class="num">8.</span>Acquisition sanity-check (temp sweep + repeats)</h2>
+  <p class="role"><code>run_acquisition_sanity_check(model, unit, seed, seed_dir, ...)</code> — DT plays N canonical-frame acquisition trials at one or more inference temperatures.</p>
+
+  <h3>Knobs</h3>
+  <pre><code><span class="n">ACQ_INFERENCE_TEMPS</span>         = [<span class="k">None</span>, <span class="n">1.0</span>]    <span class="c"># None=argmax (1 rollout); float=sampled (N repeats)</span>
+<span class="n">ACQ_INFERENCE_PROBA_REPEATS</span> = <span class="n">5</span>             <span class="c"># repeats per sampled temp</span></code></pre>
+  <p>Cost = <code>1 + (n_sampled_temps × n_repeats)</code> rollouts per (unit, seed). Default <code>[None, 1.0]</code> × 5 = 6 rollouts.</p>
+
+  <h3>Per-temp loop</h3>
+  <pre><code><span class="k">for</span> temp <span class="k">in</span> temps:
+    is_det   = (temp <span class="k">is</span> <span class="k">None</span>)
+    label    = <span class="fn">_temp_label</span>(temp)            <span class="c"># 'det' or 'T1', 'T0.5', ...</span>
+    eff_temp = <span class="n">1.0</span> <span class="k">if</span> is_det <span class="k">else</span> <span class="fn">float</span>(temp)
+    reps     = <span class="n">1</span> <span class="k">if</span> is_det <span class="k">else</span> n_repeats
+
+    <span class="k">for</span> rep <span class="k">in</span> <span class="fn">range</span>(reps):
+        rep_seed = seed * <span class="n">1000</span> + rep        <span class="c"># well-separated env seeds per (seed, rep)</span>
+        episode = <span class="fn">run_dt_episode</span>(model, session_type=acq_paradigm, subject=subject,
+                                 max_steps=max_steps, max_trials=n_trials,
+                                 deterministic=is_det, temperature=eff_temp, seed=rep_seed)
+        <span class="c"># Capture trial_configs for the viewer / reproducibility</span>
+        trial_configs_by_key[<span class="s">f'{label}__{rep}'</span>] = [<span class="fn">list</span>(tc) <span class="k">for</span> tc <span class="k">in</span> episode.<span class="fn">get</span>(<span class="s">'env_trial_configs'</span>, [])]
+        <span class="c"># Append per-step trajectory rows + per-trial summary rows</span>
+        all_step_rows.<span class="fn">extend</span>(<span class="fn">_episode_to_step_rows</span>(episode, provenance={...}))
+        <span class="k">for</span> i <span class="k">in</span> <span class="fn">range</span>(n_trials):
+            all_rows.<span class="fn">append</span>({<span class="c"># per-trial summary row </span>})</code></pre>
+
+  <h3>Outputs</h3>
+  <ul>
+    <li><code>acq_inference.parquet</code> — one row per <code>(temp × repeat × trial)</code></li>
+    <li><code>acq_trajectory.parquet</code> — one row per <code>(temp × repeat × step)</code></li>
+    <li><code>acq_trial_configs.json</code> — dict keyed by <code>f'{temp_label}__{repeat_idx}'</code>, value = list of <code>[arm, cue, goal, tag]</code> per trial. Lets the Cell 14 viewer reproduce the env exactly (the env's trial generation uses stdlib <code>random</code>, which isn't reproducible from <code>seed</code> alone).</li>
+  </ul>
+
+  <h3>Rat distribution + pass heuristic</h3>
+  <p>For each (unit, seed) the cell prints a comparison of completed trial lengths against the rat's late-acquisition distribution (min, p25, median, p75, max), computed in Cell 3. <code>in_rat_iqr</code> flags any DT trial whose length lands within <code>[rat_p25, rat_p75]</code>. Deterministic trials inside the IQR = strong "DT learned acquisition" signal.</p>
+</section>
+
+<!-- =====================================================================
+     CELL 9: PROBES LOOP
+===================================================================== -->
+<section class="cell" id="cell-9">
+  <h2><span class="num">9.</span>Probes loop</h2>
+  <p class="role"><code>run_probes(model, unit, seed, seed_dir, ...)</code> — DT through each probe paradigm in <code>SESSION_TYPES[1:]</code>, per-tag aggregation is the headline metric.</p>
+
+  <h3>Knobs</h3>
+  <pre><code><span class="n">PROBE_INFERENCE_TEMPS</span>         = [<span class="k">None</span>, <span class="n">1.0</span>]
+<span class="n">PROBE_INFERENCE_PROBA_REPEATS</span> = <span class="n">5</span></code></pre>
+
+  <h3>Triple-nested loop</h3>
+  <pre><code><span class="k">for</span> probe_st <span class="k">in</span> probe_session_types:        <span class="c"># outer: probe paradigm</span>
+    <span class="k">for</span> temp <span class="k">in</span> temps:                      <span class="c"># middle: inference mode</span>
+        <span class="k">for</span> rep <span class="k">in</span> <span class="fn">range</span>(reps):                <span class="c"># inner: repeats (1 for det, N for sampled)</span>
+            rep_seed = seed * <span class="n">1000</span> + rep
+            episode = <span class="fn">run_dt_episode</span>(model, session_type=probe_st, subject=subject,
+                                     max_steps=max_steps,
+                                     deterministic=is_det, temperature=eff_temp,
+                                     save_attention=save_attn, seed=rep_seed)
+            trial_configs_by_key[<span class="s">f'{probe_st}__{label}__{rep}'</span>] = [...]
+            all_step_rows.<span class="fn">extend</span>(<span class="fn">_episode_to_step_rows</span>(episode, provenance={...}))
+            <span class="c"># per-trial summary row with trial_tag from env_trial_configs</span></code></pre>
+
+  <h3>Trial tags — the headline metric</h3>
+  <p>Each probe paradigm produces a mix of trial types tagged by the env's generator:</p>
+  <table>
+    <thead><tr><th>tag</th><th>meaning</th></tr></thead>
+    <tbody>
+      <tr><td><code>trained</code></td><td>same conditions DT trained on (baseline)</td></tr>
+      <tr><td><code>probe_trained</code></td><td>flagged probe-context baseline (also same conditions)</td></tr>
+      <tr><td><code>novel</code></td><td>the new-condition trial (the actual probe question)</td></tr>
+      <tr><td><code>reversal</code></td><td>cue/goal pairing inverted</td></tr>
+    </tbody>
+  </table>
+  <p>If <code>trained</code> succeeds but <code>novel</code> fails → the DT memorized routes rather than learning navigation. Per-tag aggregation in Cell 11/12 is the headline.</p>
+
+  <h3>Attention saved for deterministic only</h3>
+  <pre><code>save_attn = save_attention <span class="k">and</span> is_det</code></pre>
+  <p>Sampled rollouts have rollout-specific noise that makes per-step attention less interpretable. One file per (probe × det-temp): <code>attention/probe_&lt;paradigm&gt;_temp_det.pt</code>.</p>
+
+  <h3>Outputs</h3>
+  <ul>
+    <li><code>probes.parquet</code> — per-trial summary</li>
+    <li><code>probe_trajectory.parquet</code> — per-step trajectory</li>
+    <li><code>probes_trial_configs.json</code> — dict keyed by <code>f'{probe_session_type}__{temp_label}__{repeat_idx}'</code> → list of trial configs. Same purpose as the acq sidecar (Cell 14 viewer reads it).</li>
+    <li><code>attention/probe_*.pt</code> — per-(probe × det-temp) attention tensors</li>
+  </ul>
+</section>
+
+<!-- =====================================================================
+     CELL 10: PIPELINE
+===================================================================== -->
+<section class="cell" id="cell-10">
+  <h2><span class="num">10.</span>Per-(unit, seed) full pipeline runner</h2>
+  <p class="role">The production loop. Iterates <code>TRAINING_UNITS × range(N_RUNS)</code> and runs all stages for each combo. <strong>Auto-executes</strong> — running the cell kicks off the full sweep (~90 min on MPS at default config).</p>
+
+  <h3>Memory pre-check</h3>
+  <pre><code><span class="k">def</span> <span class="fn">_estimate_dt_peak_memory_mb</span>():
+    <span class="c"># Dominant cost: per-layer attention scores: B × n_heads × (3K)² × 4 bytes</span>
+    <span class="n">T</span> = <span class="n">3</span> * <span class="n">K</span>
+    attn_per_layer_mb   = (<span class="n">BATCH_SIZE</span> * <span class="n">N_HEADS</span> * <span class="n">T</span> * <span class="n">T</span> * <span class="n">4</span>) / (<span class="n">1024</span> ** <span class="n">2</span>)
+    hidden_per_layer_mb = (<span class="n">BATCH_SIZE</span> * <span class="n">T</span> * <span class="n">HIDDEN_DIM</span> * <span class="n">4</span>) / (<span class="n">1024</span> ** <span class="n">2</span>)
+    mlp_per_layer_mb    = (<span class="n">BATCH_SIZE</span> * <span class="n">T</span> * (<span class="n">HIDDEN_DIM</span> * <span class="n">4</span>) * <span class="n">4</span>) / (<span class="n">1024</span> ** <span class="n">2</span>)
+    fwd_act_mb     = <span class="n">N_LAYERS</span> * (attn_per_layer_mb + hidden_per_layer_mb + mlp_per_layer_mb)
+    bwd_overhead_mb = fwd_act_mb * <span class="n">1.5</span>
+    n_params_approx = <span class="n">MAX_EP_LEN</span> * <span class="n">HIDDEN_DIM</span> + <span class="n">N_LAYERS</span> * <span class="n">12</span> * <span class="n">HIDDEN_DIM</span> * <span class="n">HIDDEN_DIM</span>
+    params_mb    = n_params_approx * <span class="n">4</span> / (<span class="n">1024</span> ** <span class="n">2</span>)
+    optimizer_mb = params_mb * <span class="n">2</span>                  <span class="c"># AdamW = 2 floats per param</span>
+    <span class="k">return</span> fwd_act_mb + bwd_overhead_mb + params_mb + optimizer_mb + <span class="n">100</span>  <span class="c"># +100MB headroom</span></code></pre>
+  <p><code>_query_available_memory_mb</code> probes CUDA / MPS / psutil-CPU. If estimated peak &gt; 85% of available, the cell raises before wasting time on a doomed run. Default config: ~1.5 GB estimated, ~25 GB available on M3 Max — passes trivially.</p>
+
+  <h3>Per-(unit, seed) flow</h3>
+  <pre><code><span class="k">for</span> unit <span class="k">in</span> <span class="n">TRAINING_UNITS</span>:
+    <span class="k">for</span> seed <span class="k">in</span> <span class="fn">range</span>(<span class="n">N_RUNS</span>):
+        sd = <span class="fn">seed_dir</span>(unit, seed)
+
+        <span class="c"># 1. Build loaders + train</span>
+        train_loader, val_loader, full_ds = <span class="fn">make_loaders</span>(unit, seed)
+        model, history = <span class="fn">train_one_unit</span>(unit, seed, train_loader, val_loader, full_ds, sd)
+
+        <span class="c"># 2. Acquisition sanity check</span>
+        acq_result = <span class="fn">run_acquisition_sanity_check</span>(model, unit, seed, sd)
+        acq_max_completed = <span class="fn">_acq_max_completed</span>(acq_result[<span class="s">'summary_df'</span>])
+        acq_passed = (acq_max_completed &gt;= <span class="n">ACQ_PASS_COMPLETED_TRIALS</span>)
+
+        <span class="c"># 3. Probes (gated on acq pass)</span>
+        <span class="k">if</span> acq_passed:
+            <span class="fn">run_probes</span>(model, unit, seed, sd)
+        <span class="k">else</span>:
+            <span class="fn">print</span>(<span class="s">f'  ⚠ acq gate FAILED: best {acq_max_completed}/{ACQ_PASS_COMPLETED_TRIALS} — skipping probes'</span>)
+
+        results.<span class="fn">append</span>({...})</code></pre>
+
+  <h3>The acq gate</h3>
+  <pre><code><span class="k">def</span> <span class="fn">_acq_max_completed</span>(acq_summary_df):
+    per_rollout = acq_summary_df.<span class="fn">groupby</span>([<span class="s">'temp_label'</span>, <span class="s">'repeat_idx'</span>])[<span class="s">'dt_completed'</span>].<span class="fn">sum</span>()
+    <span class="k">return</span> <span class="fn">int</span>(per_rollout.<span class="fn">max</span>()) <span class="k">if</span> <span class="fn">len</span>(per_rollout) <span class="k">else</span> <span class="n">0</span></code></pre>
+  <p>Per-seed gate: did any (temp, repeat) rollout complete ≥ <code>ACQ_PASS_COMPLETED_TRIALS</code>? Skipping probes for failed seeds isn't a sample-size loss — it's an interpretability safeguard. A "novel-route success rate of 0%" on a broken DT tells you nothing about generalization.</p>
+
+  <div class="callout warn">
+    <span class="label">Failure policy</span>
+    Fail-fast. Any exception in training / acq / probes propagates and halts the whole sweep — you see the traceback immediately. No silent skips. Re-run after fixing the issue (previous seeds' artifacts persist on disk; the sweep will overwrite them on re-run).
+  </div>
+
+  <h3>Top-level output</h3>
+  <p><code>RUN_ROOT/pipeline_results.parquet</code> — one row per (unit, seed): <code>final_train_loss</code>, <code>final_val_loss</code>, <code>best_val_loss</code>, <code>acq_max_completed</code>, <code>acq_passed</code>, <code>probes_ran</code>, <code>probes_total_completed</code>, <code>seed_sec</code>.</p>
+</section>
+
+<!-- =====================================================================
+     CELL 11: AGGREGATION
+===================================================================== -->
+<section class="cell" id="cell-11">
+  <h2><span class="num">11.</span>Cross-run aggregation</h2>
+  <p class="role"><code>aggregate_across_seeds(run_root=None)</code> — rolls the per-seed parquets into per-unit summary tables. Doesn't depend on <code>PIPELINE_RESULTS</code>; works on any completed RUN_ROOT including from previous sessions.</p>
+
+  <h3>The per-seed → cross-seed pattern</h3>
+  <p>For every metric, compute per-seed value first, then aggregate across seeds. IQM is the central statistic; <code>p25/p50/p75</code> give the uncertainty band. Pooled rate (sum completed / sum attempts) reported as a sanity check.</p>
+  <pre><code><span class="k">def</span> <span class="fn">_iqm</span>(values):
+    <span class="s">"""Interquartile mean: mean of values within [p25, p75]."""</span>
+    arr = <span class="fn">np.asarray</span>(values, dtype=<span class="fn">float</span>)
+    <span class="k">if</span> <span class="fn">len</span>(arr) == <span class="n">0</span>: <span class="k">return</span> <span class="fn">float</span>(<span class="s">'nan'</span>)
+    q25, q75 = <span class="fn">np.percentile</span>(arr, [<span class="n">25</span>, <span class="n">75</span>])
+    in_iqr = arr[(arr &gt;= q25) &amp; (arr &lt;= q75)]
+    <span class="k">return</span> <span class="fn">float</span>(in_iqr.<span class="fn">mean</span>()) <span class="k">if</span> <span class="fn">len</span>(in_iqr) <span class="k">else</span> <span class="fn">float</span>(arr.<span class="fn">mean</span>())</code></pre>
+  <p>Cell 12's <code>_iqm_ci</code> uses the <code>rliable</code> library to compute a proper stratified bootstrap CI; this hand-rolled IQM is for the at-a-glance tabular reads in the aggregate parquets.</p>
+
+  <h3>Three aggregates written to <code>RUN_ROOT/</code></h3>
+  <ol>
+    <li><strong><code>probe_aggregate.parquet</code></strong> — one row per <code>(unit_label, probe_session_type, trial_tag, temp_label)</code>: <code>n_seeds_contributing</code>, <code>n_trials_total</code>, <code>n_completed_total</code>, <code>success_rate_pooled</code>, <code>success_rate_iqm</code>, <code>success_rate_p25/50/75</code>, <code>median_steps_completed</code>.</li>
+    <li><strong><code>acq_aggregate.parquet</code></strong> — one row per <code>(unit_label, temp_label)</code>: same shape as probe_aggregate, plus <code>unit_pass_rate_across_seeds</code> (fraction of seeds where any temp hit the gate).</li>
+    <li><strong><code>training_aggregate.parquet</code></strong> — one row per <code>unit_label</code>: <code>best_val_loss_iqm/p25/p50/p75</code>, <code>epoch_to_best_iqm/p25/p75</code>, <code>mean_seed_seconds</code>, <code>median_seed_seconds</code>.</li>
+  </ol>
+  <p>Each section gracefully no-ops if its source files don't exist (e.g., probes skipped for all seeds → no <code>probes.parquet</code> → no <code>probe_aggregate.parquet</code>, with a printed notice).</p>
+
+  <h3>AGGREGATES global</h3>
+  <p>After the cell runs, <code>AGGREGATES = {'probe_aggregate': df, 'acq_aggregate': df, 'training_aggregate': df}</code> is in scope for Cell 12.</p>
+</section>
+
+<!-- =====================================================================
+     CELL 12: VISUALIZATION
+===================================================================== -->
+<section class="cell" id="cell-12">
+  <h2><span class="num">12.</span>Visualization (using <code>rliable</code>)</h2>
+  <p class="role">Four plots saved to <code>RUN_ROOT/figures/</code>, displayed inline.</p>
+
+  <h3><code>_iqm_ci</code> — the rliable workhorse</h3>
+  <pre><code><span class="k">def</span> <span class="fn">_iqm_ci</span>(per_seed_scores, reps=<span class="n">2000</span>):
+    arr = <span class="fn">np.asarray</span>(per_seed_scores, dtype=<span class="fn">float</span>)
+    arr = arr[~<span class="fn">np.isnan</span>(arr)]
+    <span class="k">if</span> <span class="fn">len</span>(arr) == <span class="n">0</span>: <span class="k">return</span> ...
+    scores_dict = {<span class="s">'_'</span>: arr.<span class="fn">reshape</span>(-<span class="n">1</span>, <span class="n">1</span>)}     <span class="c"># rliable: (n_runs, n_tasks)</span>
+    agg_func    = <span class="k">lambda</span> x: <span class="fn">np.array</span>([<span class="fn">rl_metrics.aggregate_iqm</span>(x)])
+    pts, cis    = <span class="fn">rl_lib.get_interval_estimates</span>(scores_dict, agg_func, reps=reps)
+    <span class="k">return</span> <span class="fn">float</span>(pts[<span class="s">'_'</span>][<span class="n">0</span>]), <span class="fn">float</span>(cis[<span class="s">'_'</span>][<span class="n">0</span>, <span class="n">0</span>]), <span class="fn">float</span>(cis[<span class="s">'_'</span>][<span class="n">1</span>, <span class="n">0</span>])</code></pre>
+
+  <h3>The four plots</h3>
+  <ol>
+    <li><strong>Training curves</strong> (<code>training_curves.png</code>) — train/val loss vs epoch, median + p25/p75 band across seeds. Per-unit lines.</li>
+    <li><strong>Acq sanity</strong> (<code>acq_sanity.png</code>) — per-seed completion rate per temp; dots = seeds, bar = mean, red dashed line at the pass-threshold (<code>ACQ_PASS_COMPLETED_TRIALS / ACQ_INFERENCE_TRIALS</code>).</li>
+    <li><strong>Probe performance</strong> (<code>probe_performance.png</code>) — grouped bars per (probe × tag × temp); heights = <code>rliable</code> IQM, error bars = stratified bootstrap 95% CI across seeds.</li>
+    <li><strong>Performance profiles</strong> (<code>performance_profiles.png</code>) — <code>P(success_rate ≥ τ)</code> curves across all (probe × tag) tasks, one curve per temp. Distributional view of "how often does the DT exceed threshold X across all conditions."</li>
+  </ol>
+
+  <h3>Why rliable</h3>
+  <p>The per-seed × per-condition matrix is exactly what rliable's stratified bootstrap is designed for. With N=5 seeds × many (probe, tag) tasks, naive percentile bands underestimate uncertainty. Stratified bootstrap resamples per-condition for tighter, more defensible CIs at small N. See Agarwal et al. 2021, "Deep RL at the Edge of the Statistical Precipice." Cell 11's hand-rolled IQM/percentiles are still in the aggregate parquets for quick tabular reads; Cell 12 re-reads the per-seed parquets independently for the rliable plots.</p>
+
+  <p>All four auto-execute at the bottom.</p>
+</section>
+
+<!-- =====================================================================
+     CELL 13: DT DIAGNOSTICS
+===================================================================== -->
+<section class="cell" id="cell-13">
+  <h2><span class="num">13.</span>DT diagnostics — paths + attention</h2>
+  <p class="role">Drill-down visualizations beyond Cell 12's aggregates. Three plots, auto-execute.</p>
+
+  <h3><code>_draw_maze_skeleton(ax)</code></h3>
+  <p>Helper that paints the 13×13 maze: valid floor cells (3 horizontal corridors + 4 arms), 4 wells (open steelblue squares), 4 cue positions (gold circles). Inverts the y-axis to screen coords (y-down). Reused by Cell 14.</p>
+
+  <h3><code>plot_path_replay</code></h3>
+  <p>One DT trial on the maze. Defaults: first completed trial of seed 0's first probe paradigm, deterministic temp.</p>
+  <pre><code>traj = <span class="fn">pd.concat</span>([<span class="fn">pd.read_parquet</span>(p) <span class="k">for</span> p <span class="k">in</span> probe_trajectory_paths])
+sub = traj[(traj[<span class="s">'seed'</span>] == seed) &amp; (traj[<span class="s">'probe_session_type'</span>] == probe)
+           &amp; (traj[<span class="s">'temp_label'</span>] == temp_label) &amp; (traj[<span class="s">'repeat_idx'</span>] == <span class="n">0</span>)]
+<span class="c"># Default trial: first completed (env_reward > 0.5)</span>
+completed_trials = sub[sub[<span class="s">'env_reward'</span>] &gt; <span class="n">0.5</span>][<span class="s">'trial_id'</span>].<span class="fn">unique</span>()
+trial_idx = <span class="fn">int</span>(completed_trials[<span class="n">0</span>]) <span class="k">if</span> <span class="fn">len</span>(completed_trials) <span class="k">else</span> <span class="fn">int</span>(sub[<span class="s">'trial_id'</span>].<span class="fn">min</span>())
+trial = sub[sub[<span class="s">'trial_id'</span>] == trial_idx].<span class="fn">sort_values</span>(<span class="s">'step'</span>)
+<span class="c"># Color trajectory by step (viridis), markers at start (lime) and end (red X / square)</span></code></pre>
+  <div class="callout warn">
+    <span class="label">Start-arm vs reward-corner</span>
+    See <code>docs/10_vanilla_dt.md</code> for the discussion: <code>trial_id=0</code> is the one trial whose <code>xs[0]</code> is a start-arm (not a reward corner). For all other trial_ids, <code>xs[0]</code> is the previous trial's reward corner (where RTG resets). The default trial picker often lands on trial 0, which can look "wrong" if you expect every trajectory to begin at a reward corner.
+  </div>
+
+  <h3><code>_decode_attention_to_modality_grid</code></h3>
+  <p>For each saved per-step attention tensor of shape <code>(n_heads, ctx_K * 3)</code>:</p>
+  <ul>
+    <li>Each attention column <code>j</code> sits at <code>step_offset = (j // 3) - (ctx_K - 1)</code> ∈ <code>[-(ctx_K-1), 0]</code></li>
+    <li><code>modality = j % 3</code> with 0=R (return), 1=s (state), 2=a (action)</li>
+  </ul>
+  <p>Aggregate across all per-step rows by averaging into bins <code>(offset, modality)</code>. Returns a <code>(n_heads, K, 3)</code> array of average attention.</p>
+
+  <h3>The three plots</h3>
+  <ol>
+    <li><strong><code>path_replay.png</code></strong> — one trial on the maze with the colored trajectory line.</li>
+    <li><strong><code>attention_summary.png</code></strong> — per probe: average attention vs step_offset, 3 lines (R / s / a). Averaged over heads × seeds × steps. The headline question: which modality stream does the DT lean on, across what horizon?</li>
+    <li><strong><code>attention_heatmap.png</code></strong> — same data kept per-head. One subplot per (probe × modality) showing all <code>n_heads</code> rows. Reveals whether heads specialize.</li>
+  </ol>
+</section>
+
+<!-- =====================================================================
+     CELL 14: SESSION PLAYBACK
+===================================================================== -->
+<section class="cell" id="cell-14">
+  <h2><span class="num">14.</span>Session playback (interactive widget)</h2>
+  <p class="role">An ipywidgets viewer that plays a whole DT rollout step-by-step in the env, rendering the allocentric maze + left/right eye images. Modeled on <code>02_explore_yoked_data.ipynb</code>'s replay viewer.</p>
+
+  <h3>Pickers (right column)</h3>
+  <table>
+    <thead><tr><th>dropdown</th><th>populates from</th></tr></thead>
+    <tbody>
+      <tr><td>Source</td><td>unique <code>source</code> values (<code>acq</code> / <code>probe</code>) in the trajectory parquets</td></tr>
+      <tr><td>Paradigm</td><td>unique <code>_session_type</code> for that source (<code>paradigm</code> for acq, <code>probe_session_type</code> for probe)</td></tr>
+      <tr><td>Temp</td><td>unique <code>temp_label</code> for that (source, paradigm)</td></tr>
+      <tr><td>Seed</td><td>unique <code>seed</code> for that (source, paradigm, temp)</td></tr>
+      <tr><td>Repeat</td><td>unique <code>repeat_idx</code> for that (source, paradigm, temp, seed)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Run-click flow</h3>
+  <pre><code><span class="k">def</span> <span class="fn">on_run_click</span>(_b):
+    df = <span class="fn">_filtered</span>()                                        <span class="c"># filter TRAJ by the 5 dropdowns</span>
+    actions  = df.<span class="fn">sort_values</span>(<span class="s">'step'</span>).<span class="fn">reset_index</span>(drop=<span class="k">True</span>)
+    subject  = <span class="fn">str</span>(actions[<span class="s">'subject'</span>].<span class="fn">iloc</span>[<span class="n">0</span>])
+    rep_seed = <span class="fn">int</span>(actions[<span class="s">'rep_seed'</span>].<span class="fn">iloc</span>[<span class="n">0</span>])
+
+    <span class="c"># Load trial_configs sidecar so env reproduces inference's actual trial pool</span>
+    sidecar_path = <span class="n">RUN_ROOT</span> / unit_label / <span class="s">f'seed_{seed_val}'</span> / sidecar_name
+    <span class="k">with</span> <span class="fn">open</span>(sidecar_path) <span class="k">as</span> f:
+        configs_map = <span class="fn">json.load</span>(f)
+    trial_configs = configs_map.<span class="fn">get</span>(key)
+
+    env = <span class="fn">CornerMazeEnv</span>(
+        max_steps=<span class="fn">max</span>(<span class="n">10000</span>, <span class="fn">len</span>(actions) + <span class="n">100</span>),
+        session_type=session_type,
+        agent_cue_goal_orientation=<span class="fn">_SUBJECT_META</span>[subject][<span class="s">'cue_goal_orientation'</span>],
+        start_goal_location=<span class="fn">_trained_goal_for_subject</span>(subject),
+        obs_mode=<span class="s">'view'</span>, render_mode=<span class="s">'rgb_array'</span>,
+        trial_configs=trial_configs,                                <span class="c"># forces deterministic trial pool</span>
+    )
+    env.<span class="fn">reset</span>(seed=rep_seed)
+    env.<span class="fn">_load_embeddings</span>()                                       <span class="c"># enable eye-image lookup</span></code></pre>
+
+  <div class="callout">
+    <span class="label">Why the sidecar JSON</span>
+    <code>CornerMazeEnv.gen_grid_configuration_sequence</code> uses Python's stdlib <code>random</code> (not <code>np_random</code>) to shuffle trial pools. <code>env.reset(seed=N)</code> only seeds <code>np_random</code>, so the trial pool depends on global Python RNG state — not reproducible across kernel sessions. The sidecar captures the exact trial_configs the env used at inference time so the viewer can pass them back via the <code>trial_configs=</code> kwarg (which bypasses the shuffle).
+  </div>
+
+  <h3>Step / play</h3>
+  <pre><code><span class="k">def</span> <span class="fn">_advance_one_step</span>():
+    row = state[<span class="s">'actions'</span>].<span class="fn">iloc</span>[state[<span class="s">'current_step'</span>]]
+    env.<span class="fn">step</span>(<span class="fn">int</span>(row[<span class="s">'action'</span>]))
+    state[<span class="s">'current_step'</span>] += <span class="n">1</span>
+    <span class="c"># Sanity: env's post-step pose should match the parquet's next pre-action row</span>
+    <span class="k">if</span> env_pose != parquet_pose:
+        <span class="fn">_set_status</span>(<span class="s">f'env diverged from parquet at step {cs}: ...'</span>, color=<span class="s">'#fa8'</span>)</code></pre>
+  <p>Per-step divergence check is a silent safety net — it should never trip once the sidecar is in place. If it does, the env wasn't constructed exactly as inference used it.</p>
+
+  <h3>Controls</h3>
+  <ul>
+    <li>Run — load the selected rollout, build env, reset.</li>
+    <li>Reset — env.reset(seed=rep_seed), back to step 0.</li>
+    <li>Play / Pause — async loop calls <code>_advance_one_step</code> at <code>speed_slider.value</code> steps/sec.</li>
+    <li>← Back — rewind one step by env.reset + replay forward to target (CornerMazeEnv has no rewind primitive; ~1.3 ms/step).</li>
+    <li>Step → — manual single-step advance.</li>
+  </ul>
+
+  <h3>Renders</h3>
+  <p>Allocentric maze frame from <code>env.get_allocentric_frame(tile_size=23)</code>. Eye images from <code>env._pose_to_left_eye</code> / <code>_pose_to_right_eye</code> lookups (populated by <code>env._load_embeddings()</code>). Single-line session label under the maze for orientation.</p>
+
+  <p>Cell falls back to a "no trajectory parquets found — run Cell 10 first" message if <code>RUN_ROOT</code> is empty.</p>
+</section>
+
+<!-- =====================================================================
+     CELL 15: RECIPES
+===================================================================== -->
+<section class="cell" id="cell-15">
+  <h2><span class="num">15.</span>Recipes — preset run configurations</h2>
+  <p class="role">Reference dict of three common ways to run the notebook. Does <strong>not</strong> auto-apply — read the values and edit Cell 1 by hand.</p>
+
+  <table>
+    <thead><tr><th></th><th>smoke</th><th>iteration</th><th>headline (default)</th></tr></thead>
+    <tbody>
+      <tr><td>purpose</td><td>pipeline runs end-to-end</td><td>dev pace; see signal</td><td>publication / cohort comparison</td></tr>
+      <tr><td><code>N_RUNS</code></td><td>1</td><td>3</td><td>5</td></tr>
+      <tr><td><code>N_EPOCHS</code></td><td>2</td><td>15</td><td>50</td></tr>
+      <tr><td><code>ACQ_INFERENCE_TEMPS</code></td><td><code>[None]</code></td><td><code>[None, 1.0]</code></td><td><code>[None, 1.0]</code></td></tr>
+      <tr><td><code>PROBE_INFERENCE_TEMPS</code></td><td><code>[None]</code></td><td><code>[None]</code></td><td><code>[None, 1.0]</code></td></tr>
+      <tr><td><code>ACQ_INFERENCE_PROBA_REPEATS</code></td><td>1</td><td>2</td><td>5</td></tr>
+      <tr><td><code>PROBE_INFERENCE_PROBA_REPEATS</code></td><td>1</td><td>2</td><td>5</td></tr>
+      <tr><td>wall (MPS M3 Max)</td><td>~3 min</td><td>~25 min</td><td>~90 min</td></tr>
+      <tr><td>wall (CPU)</td><td>~10 min</td><td>~90 min</td><td>~6 hours</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Why these knobs</h3>
+  <ul>
+    <li><code>N_RUNS</code> drives statistical power on cross-seed plots — headline (5) gives meaningful IQR on rliable bootstrap CIs.</li>
+    <li><code>N_EPOCHS</code> drives training quality — smoke (2) is barely-trained; iteration (15) finds a real minimum; headline (50) trains to convergence with early-stop available.</li>
+    <li><code>*_TEMPS</code> lists determine inference modes — <code>None</code>=argmax, <code>1.0</code>=paper-faithful sampled.</li>
+    <li><code>*_PROBA_REPEATS</code> controls how many sampled rollouts per temp — headline (5) is enough for meaningful stratified bootstrap CI.</li>
+  </ul>
+
+  <h3><code>print_recipe(name=None)</code></h3>
+  <p>Prints a side-by-side table comparing the currently-active Cell 1 values against the recipe(s). The active recipe (if any) is flagged. Useful for sanity-checking what you actually have configured before kicking off Cell 10.</p>
+
+  <p>Recipes live at the bottom of the notebook, not the top, because they're shortcuts for people who already understand Cell 1's knobs — reading top-to-bottom you learn the knobs first.</p>
+</section>
+
+</main>
+</div>
+
+<script>
+  // Smooth scroll for nav links
+  document.querySelectorAll('nav#toc a').forEach(a => {
+    a.addEventListener('click', e => {
+      const id = a.getAttribute('href');
+      if (id.startsWith('#')) {
+        e.preventDefault();
+        document.querySelector(id).scrollIntoView({behavior: 'smooth', block: 'start'});
+      }
+    });
+  });
+</script>
+</body>
+</html>
