@@ -41,3 +41,6 @@ notebooks/students/*/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Local notebook copies for experimentation (e.g. 10a_local.ipynb)
+notebooks/*_local.ipynb
