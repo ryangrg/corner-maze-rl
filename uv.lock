@@ -486,6 +486,7 @@ dependencies = [
     { name = "numpy" },
     { name = "pandas" },
     { name = "pyarrow" },
+    { name = "rliable" },
     { name = "torch" },
     { name = "tqdm" },
 ]
@@ -526,6 +527,7 @@ requires-dist = [
     { name = "pygame", marker = "extra == 'replay'", specifier = ">=2.5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.4" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1" },
+    { name = "rliable", specifier = ">=1.2.0" },
     { name = "rliable", marker = "extra == 'eval'", specifier = ">=1.2" },
     { name = "sb3-contrib", marker = "extra == 'sb3'", specifier = ">=2.2" },
     { name = "stable-baselines3", marker = "extra == 'sb3'", specifier = ">=2.2" },

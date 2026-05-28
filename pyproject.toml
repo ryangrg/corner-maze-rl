@@ -22,6 +22,7 @@ dependencies = [
     "matplotlib>=3.7",
     "ipywidgets>=8.1.8",
     "imageio>=2.37.3",
+    "rliable>=1.2.0",
 ]
 
 [project.optional-dependencies]
