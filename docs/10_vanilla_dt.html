@@ -703,11 +703,20 @@
   <h3>State encoder factory</h3>
   <pre><code><span class="k">def</span> <span class="fn">make_state_encoder</span>(encoder_type, state_lookup, hidden_dim, freeze):
     <span class="k">if</span> encoder_type <span class="k">in</span> (<span class="s">'pose_visual'</span>, <span class="s">'grid_cell'</span>):
-        <span class="n">w</span> = <span class="fn">torch.from_numpy</span>(state_lookup).<span class="fn">float</span>()
+        <span class="c"># .clone() decouples the Parameter's storage from STATE_LOOKUP so that</span>
+        <span class="c"># FREEZE_ENCODER=False updates don't bleed across seeds via the shared numpy buffer.</span>
+        <span class="n">w</span> = <span class="fn">torch.from_numpy</span>(state_lookup).<span class="fn">float</span>().<span class="fn">clone</span>()
         <span class="k">return</span> <span class="fn">nn.Embedding.from_pretrained</span>(<span class="n">w</span>, freeze=freeze)
     <span class="k">elif</span> encoder_type == <span class="s">'image_cnn'</span>:
         <span class="k">return</span> <span class="fn">ImageCNNEncoder</span>(state_lookup, hidden_dim)</code></pre>
   <p>For frozen lookups the encoder is just an <code>nn.Embedding</code> initialized from the npz; gradients don't flow through it. For <code>image_cnn</code> we instantiate the trainable CNN (3→16 conv → flatten → Linear → 60D).</p>
+
+  <div class="callout warn">
+    <span class="label">Why the <code>.clone()</code> matters</span>
+    <p>Without <code>.clone()</code>, the storage chain <code>STATE_LOOKUP (numpy) → torch.from_numpy (shared) → .float() (no-op on already-float32, shared) → nn.Parameter (shared via detach)</code> means the model's <code>embedding.weight</code> tensor and the global numpy <code>STATE_LOOKUP</code> point at the same float32 buffer.</p>
+    <p>With <code>FREEZE_ENCODER=True</code> this is harmless — nothing modifies the weights. With <code>FREEZE_ENCODER=False</code> it's a <strong>silent cross-seed contamination bug</strong>: AdamW's in-place updates on <code>embedding.weight</code> land in <code>STATE_LOOKUP</code>, so seed 1's <code>make_dt()</code> initializes from seed 0's <em>trained</em> weights instead of the original grid-cell vectors. Each seed inherits the previous seed's modifications and the <code>N_RUNS</code> independence required for stratified-bootstrap CIs (Cell 12) silently breaks.</p>
+    <p>The <code>.clone()</code> costs ~110 KB per seed (one fresh copy of the 295×60 or 484×60 lookup) and guarantees each seed starts from the pristine pretrained values regardless of freeze mode. <strong>Mandatory before flipping <code>FREEZE_ENCODER=False</code></strong>; harmless for the default frozen runs. <code>ImageCNNEncoder</code> doesn't need the same fix — its <code>uint8 → float32</code> conversion in <code>.float()</code> forces a genuine copy at construction.</p>
+  </div>
 
   <h3>Causal self-attention</h3>
   <div class="lbl">
@@ -1061,22 +1070,41 @@ position 5 → a₁
 
         <span class="c"># 2. Acquisition sanity check</span>
         acq_result = <span class="fn">run_acquisition_sanity_check</span>(model, unit, seed, sd)
-        acq_max_completed = <span class="fn">_acq_max_completed</span>(acq_result[<span class="s">'summary_df'</span>])
-        acq_passed = (acq_max_completed &gt;= <span class="n">ACQ_PASS_COMPLETED_TRIALS</span>)
+        acq_max_correct = <span class="fn">_acq_max_correct</span>(sd)
+        acq_passed = (acq_max_correct &gt;= <span class="n">ACQ_PASS_COMPLETED_TRIALS</span>)
 
         <span class="c"># 3. Probes (gated on acq pass)</span>
         <span class="k">if</span> acq_passed:
             <span class="fn">run_probes</span>(model, unit, seed, sd)
         <span class="k">else</span>:
-            <span class="fn">print</span>(<span class="s">f'  ⚠ acq gate FAILED: best {acq_max_completed}/{ACQ_PASS_COMPLETED_TRIALS} — skipping probes'</span>)
+            <span class="fn">print</span>(<span class="s">f'  ⚠ acq gate FAILED: best {acq_max_correct}/{ACQ_PASS_COMPLETED_TRIALS} correct trials — skipping probes'</span>)
 
         results.<span class="fn">append</span>({...})</code></pre>
 
   <h3>The acq gate</h3>
-  <pre><code><span class="k">def</span> <span class="fn">_acq_max_completed</span>(acq_summary_df):
-    per_rollout = acq_summary_df.<span class="fn">groupby</span>([<span class="s">'temp_label'</span>, <span class="s">'repeat_idx'</span>])[<span class="s">'dt_completed'</span>].<span class="fn">sum</span>()
-    <span class="k">return</span> <span class="fn">int</span>(per_rollout.<span class="fn">max</span>()) <span class="k">if</span> <span class="fn">len</span>(per_rollout) <span class="k">else</span> <span class="n">0</span></code></pre>
-  <p>Per-seed gate: did any (temp, repeat) rollout complete ≥ <code>ACQ_PASS_COMPLETED_TRIALS</code>? Skipping probes for failed seeds isn't a sample-size loss — it's an interpretability safeguard. A "novel-route success rate of 0%" on a broken DT tells you nothing about generalization.</p>
+  <pre><code><span class="k">def</span> <span class="fn">_acq_max_correct</span>(seed_dir_path):
+    traj = <span class="fn">pd.read_parquet</span>(<span class="fn">Path</span>(seed_dir_path) / <span class="s">'acq_trajectory.parquet'</span>)
+    well_locs = {<span class="fn">tuple</span>(<span class="fn">map</span>(<span class="fn">int</span>, loc)) <span class="k">for</span> loc <span class="k">in</span> <span class="n">WELL_LOCATIONS</span>}
+    best = <span class="n">0</span>
+    <span class="k">for</span> _keys, sub <span class="k">in</span> traj.<span class="fn">groupby</span>([<span class="s">'temp_label'</span>, <span class="s">'repeat_idx'</span>], sort=<span class="k">False</span>):
+        <span class="c"># Disqualify rollouts that truncated before running the full session</span>
+        <span class="k">if</span> <span class="fn">int</span>(sub[<span class="s">'trial_id'</span>].<span class="fn">nunique</span>()) &lt; <span class="n">ACQ_INFERENCE_TRIALS</span>:
+            <span class="k">continue</span>
+        n_correct = <span class="n">0</span>
+        <span class="k">for</span> _tid, trial <span class="k">in</span> sub.<span class="fn">groupby</span>(<span class="s">'trial_id'</span>, sort=<span class="k">False</span>):
+            rewards = trial[<span class="s">'env_reward'</span>].<span class="fn">to_numpy</span>()
+            <span class="k">if</span> <span class="k">not</span> (rewards &gt; <span class="n">0.5</span>).<span class="fn">any</span>(): <span class="k">continue</span>            <span class="c"># trial didn't reach goal</span>
+            prev_at_well, wrong = <span class="k">False</span>, <span class="k">False</span>
+            <span class="k">for</span> x, y, r <span class="k">in</span> <span class="fn">zip</span>(trial[<span class="s">'grid_x'</span>], trial[<span class="s">'grid_y'</span>], rewards):
+                cur_at_well = (<span class="fn">int</span>(x), <span class="fn">int</span>(y)) <span class="k">in</span> well_locs
+                <span class="k">if</span> cur_at_well <span class="k">and</span> <span class="k">not</span> prev_at_well <span class="k">and</span> r &lt; <span class="n">0.5</span>:
+                    wrong = <span class="k">True</span>; <span class="k">break</span>                          <span class="c"># wrong-well entry before goal</span>
+                prev_at_well = cur_at_well
+            <span class="k">if</span> <span class="k">not</span> wrong: n_correct += <span class="n">1</span>
+        best = <span class="fn">max</span>(best, n_correct)
+    <span class="k">return</span> <span class="fn">int</span>(best)</code></pre>
+  <p>Per-seed gate, two-part rule: a (temp, repeat) rollout qualifies only if it (a) ran the full <code>ACQ_INFERENCE_TRIALS</code>-trial session AND (b) achieved ≥ <code>ACQ_PASS_COMPLETED_TRIALS</code> <em>strictly-correct</em> trials. A correct trial reaches the goal well without ever entering a non-goal well first. Wrong-well visits don't appear in <code>env_reward</code> (the env only sets <code>trial_score=0</code> internally), so detection is positional against <code>WELL_LOCATIONS</code> in the acq trajectory parquet. A rollout that solves 31/31 trials perfectly but truncates before trial 32 fails the gate — partial sessions can't pass, regardless of correct count.</p>
+  <p>Skipping probes for failed seeds isn't a sample-size loss — it's an interpretability safeguard. A "novel-route success rate of 0%" on a broken DT tells you nothing about generalization.</p>
 
   <div class="callout warn">
     <span class="label">Failure policy</span>
@@ -1196,21 +1224,23 @@ trial = sub[sub[<span class="s">'trial_id'</span>] == trial_idx].<span class="fn
   <h2><span class="num">14.</span>Session playback (interactive widget)</h2>
   <p class="role">An ipywidgets viewer that plays a whole DT rollout step-by-step in the env, rendering the allocentric maze + left/right eye images. Modeled on <code>02_explore_yoked_data.ipynb</code>'s replay viewer.</p>
 
-  <h3>Pickers (right column)</h3>
+  <h3>Picker (right column)</h3>
+  <p>A single scrollable <code>widgets.Select</code> in monospace. The trajectory parquets are pre-grouped by <code>(source, _session_type, temp_label, seed, repeat_idx)</code> into a <code>ROLLOUTS</code> DataFrame, one row per rollout. Each option formats as fixed-width columns; clicking a row highlights it, and the existing Run button loads that rollout into the viewer.</p>
   <table>
-    <thead><tr><th>dropdown</th><th>populates from</th></tr></thead>
+    <thead><tr><th>column</th><th>value</th></tr></thead>
     <tbody>
-      <tr><td>Source</td><td>unique <code>source</code> values (<code>acq</code> / <code>probe</code>) in the trajectory parquets</td></tr>
-      <tr><td>Paradigm</td><td>unique <code>_session_type</code> for that source (<code>paradigm</code> for acq, <code>probe_session_type</code> for probe)</td></tr>
-      <tr><td>Temp</td><td>unique <code>temp_label</code> for that (source, paradigm)</td></tr>
-      <tr><td>Seed</td><td>unique <code>seed</code> for that (source, paradigm, temp)</td></tr>
-      <tr><td>Repeat</td><td>unique <code>repeat_idx</code> for that (source, paradigm, temp, seed)</td></tr>
+      <tr><td>Source</td><td><code>acq</code> / <code>probe</code></td></tr>
+      <tr><td>Paradigm</td><td><code>_session_type</code> (<code>paradigm</code> for acq, <code>probe_session_type</code> for probe)</td></tr>
+      <tr><td>Temp</td><td><code>temp_label</code></td></tr>
+      <tr><td>Seed</td><td><code>seed</code></td></tr>
+      <tr><td>Repeat</td><td><code>repeat_idx</code></td></tr>
+      <tr><td>Correct/Total</td><td>per-rollout: strictly-correct trials (no wrong-well entry before goal) over distinct <code>trial_id</code>s started. Same definition as the acq gate in Cell 10 — wrong-well visits are detected positionally against <code>WELL_LOCATIONS</code> rather than from <code>env_reward</code> (which doesn't change on a wrong-well hit, only <code>trial_score</code> does, internally). Useful for spotting which rollouts the gate would have passed without scrolling back to Cell 10's output.</td></tr>
     </tbody>
   </table>
 
   <h3>Run-click flow</h3>
   <pre><code><span class="k">def</span> <span class="fn">on_run_click</span>(_b):
-    df = <span class="fn">_filtered</span>()                                        <span class="c"># filter TRAJ by the 5 dropdowns</span>
+    df = <span class="fn">_filtered</span>()                                        <span class="c"># filter TRAJ by the selected ROLLOUTS row</span>
     actions  = df.<span class="fn">sort_values</span>(<span class="s">'step'</span>).<span class="fn">reset_index</span>(drop=<span class="k">True</span>)
     subject  = <span class="fn">str</span>(actions[<span class="s">'subject'</span>].<span class="fn">iloc</span>[<span class="n">0</span>])
     rep_seed = <span class="fn">int</span>(actions[<span class="s">'rep_seed'</span>].<span class="fn">iloc</span>[<span class="n">0</span>])
