@@ -2,7 +2,7 @@
 
 Decision Transformer + PPO + Successor-Representation baselines on a 13×13 corner-maze MiniGrid environment, trained against yoked rodent behavior. Built for student use via Colab and locally in VS Code.
 
-> **Status:** planning phase, pre-build. Design doc in [md/dt-repo-plan.md](md/dt-repo-plan.md). The legacy research repo with the original env, yoking pipeline, and prior experiments lives at [corner-maze-rl-legacy](https://github.com/ryangrg/corner-maze-rl-legacy) — code and data will be ported in per the manifest in §16 of the design doc.
+> **Status:** Decision Transformer pipeline is running end-to-end (training + acquisition gate + probes + diagnostics) in [notebooks/10_vanilla_dt.ipynb](notebooks/10_vanilla_dt.ipynb). PPO baseline is wired up in [notebooks/03A_ppo_minigrid_cnn.ipynb](notebooks/03A_ppo_minigrid_cnn.ipynb). All training/analysis notebooks ship with a one-click **Open in Colab** bootstrap (repo clone, package install, GPU runtime, Drive-backed run artifacts). Design doc: [md/dt-repo-plan.md](md/dt-repo-plan.md). Legacy research repo: [corner-maze-rl-legacy](https://github.com/ryangrg/corner-maze-rl-legacy).
 
 ## What this is
 
@@ -10,7 +10,7 @@ A teaching repo for offline / behavior-cloning-style RL on a real neuroscience t
 
 - **Environment** — 13×13 MiniGrid corner maze with structured trial phases (exposure → pretrial → trial → ITI), four wells, four cues, configurable session paradigms (PI, VC, PI+VC).
 - **Yoked dataset** — action sequences derived from real rodent behavioral tracking: **531 sessions across 56 subjects in 4 training groups**, with env-derived per-step rewards and per-trial return-to-go. See [Subjects and yoked data](#subjects-and-yoked-data) below for the breakdown.
-- **Models** — Decision Transformer (the headline model), plus PPO and SR baselines for comparison.
+- **Models** — Decision Transformer (the headline model; vanilla kzl-faithful port + linear-attention and full-context variants) plus PPO and SR baselines for comparison. Source in [src/corner_maze_rl/models/](src/corner_maze_rl/models/).
 - **Encoders** — composable state encoders (grid-cell pose vectors, pretrained visual CNN, one-hot tabular, reward-history) all standardized to 60D.
 - **Eval protocol** — IQM + stratified bootstrap CIs, drawdown reliability, performance profiles, kill-switch on flat learning curves. Grounded in the empirical-RL methodology canon ([Henderson 2018], [Agarwal 2021], [Patterson 2024]).
 
@@ -75,9 +75,28 @@ The yoking pipeline that produced these tables lives in [src/corner_maze_rl/yoki
 
 ## Quickstart
 
-> Build is in progress. The commands below describe the *target* student workflow; not all are wired up yet.
+### Colab (one-click, recommended for training)
 
-### Local + VS Code (recommended)
+Every training and analysis notebook in [notebooks/](notebooks/) starts with an **Open in Colab** badge and a self-contained bootstrap cell. Click the badge, pick a GPU runtime (`Runtime → Change runtime type → T4 / L4 / A100`), and `Run all`. The bootstrap:
+
+- Clones this repo to `/content/corner-maze-rl` and installs it with `pip install -e .`.
+- Mounts Google Drive (one-click consent) and starts a background daemon that rsyncs `data/runs/` → `corner-maze-rl-colab/runs/` on Drive every ~120 s. Drive disconnects are tolerated — sync retries silently.
+- All data inputs (lookups + yoked dataset) come with the cloned repo. No upload step.
+
+Recommended entrypoints:
+
+| Notebook | What it does | Runtime |
+|---|---|---|
+| [10_vanilla_dt.ipynb](notebooks/10_vanilla_dt.ipynb) | **Headline DT pipeline** — train → acq gate → probes → rliable plots → attention diagnostics. | T4 fine for smoke / iteration; L4 or A100 for headline runs. |
+| [10a_optimized.ipynb](notebooks/10a_optimized.ipynb) | Speed-tuned variant of `10_vanilla_dt` (bf16, `torch.compile`, TF32). | L4 / A100. |
+| [09_hybrid_fullctx_linearattn_shortvanilladt.ipynb](notebooks/09_hybrid_fullctx_linearattn_shortvanilladt.ipynb), [08_fullctx_linearattn.ipynb](notebooks/08_fullctx_linearattn.ipynb) | Linear-attention DT variants. | T4 / L4. |
+| [03A_ppo_minigrid_cnn.ipynb](notebooks/03A_ppo_minigrid_cnn.ipynb) | PPO baseline (MaskablePPO + CNN over MiniGrid views). | T4. |
+| [01_explore_env.ipynb](notebooks/01_explore_env.ipynb), [02_explore_yoked_data.ipynb](notebooks/02_explore_yoked_data.ipynb) | Env walk-through + yoked-data tour. | CPU. |
+
+Note: `01_explore_env.ipynb`'s interactive manual-control UI is VS Code / local Jupyter only — Colab's iframe-sandboxed widget framework breaks keyboard input and ipywidgets rendering. All non-interactive cells (env init, visualization, episode replay) run fine on Colab.
+
+### Local + VS Code
+
 ```bash
 git clone https://github.com/ryangrg/corner-maze-rl.git
 cd corner-maze-rl
@@ -86,13 +105,7 @@ python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e .
 ```
 
-### Colab-in-browser (limited)
-The interactive `notebooks/` UI is **VS Code / local Jupyter only** — Colab's iframe-sandboxed widget framework breaks rendering and keyboard input. For non-interactive components (training scripts, dataset builds, evaluation), Colab is fine:
-```python
-!pip install git+https://github.com/ryangrg/corner-maze-rl.git
-from corner_maze_rl import ...
-```
-If you need cloud + the interactive UI, point VS Code at a remote Jupyter kernel (e.g. GitHub Codespaces or a managed runtime) — the IDE renders widgets locally even when compute is remote.
+The same notebooks run locally — the Colab bootstrap cell is a no-op when not on Colab. Training writes to `data/runs/` under the repo root.
 
 ## Student workspace
 
@@ -107,22 +120,33 @@ cp notebooks/03_ppo_experiments.ipynb notebooks/students/alice/03_ppo_lr_sweep.i
 
 **Sharing results.** When you want feedback on a notebook, either (a) commit a copy into `notebooks/contrib/<your-name>/` (not gitignored) and open a PR, or (b) work on a fork. The split keeps "private scratch" and "ready for review" distinct.
 
-A good first run: open [notebooks/03_ppo_experiments.ipynb](notebooks/03_ppo_experiments.ipynb), keep the smoke-run defaults (`N_SEEDS=2, NUM_EPISODES=10`), and execute top-to-bottom. The §7 recipes table shows how to scale up.
+A good first run: open [notebooks/10_vanilla_dt.ipynb](notebooks/10_vanilla_dt.ipynb), apply the **Smoke** recipe from the table at the bottom of the notebook (`N_RUNS=1, N_EPOCHS=2`), and execute top-to-bottom. Confirms the pipeline runs end-to-end in ~3 min on a T4. Then scale up via the **Iteration** or **Headline** recipe.
 
 ## Repository layout
 
 ```
 corner-maze-rl/
 ├── README.md
-├── md/                        # design + spec docs (start here)
-│   ├── dt-repo-plan.md        # full design doc — start here
+├── md/                          # design + spec docs (start here)
+│   ├── dt-repo-plan.md          # full design doc
 │   ├── environment-architecture.md
-│   ├── maze-behavior-spec.md  # 2S2C task rules
+│   ├── maze-behavior-spec.md    # 2S2C task rules
 │   ├── reward-structure-analysis.md
 │   └── sr-yoked-negative-results.md
-├── src/corner_maze_rl/        # (to be built — see plan §3)
-├── notebooks/                 # interactive notebooks (VS Code recommended)
-├── data/                      # (gitignored; setup script will populate)
+├── docs/                        # rendered HTML walkthroughs (10_vanilla_dt.html, ...)
+├── src/corner_maze_rl/
+│   ├── env/                     # CornerMazeEnv (MiniGrid)
+│   ├── models/                  # decision_transformer{,_decoupled_dimension}.py,
+│   │                            #   linear_decision_transformer*.py, ppo.py, sr.py
+│   ├── encoders/                # grid-cell / pose-visual / image-CNN state encoders (60D)
+│   ├── data/                    # yoked dataset loaders, RTG, rotation to canonical frame
+│   ├── train/                   # runner, loop, kill_switch, SB3 callbacks
+│   ├── eval/                    # IQM + rliable bootstrap utilities
+│   ├── yoking/                  # behavior → MiniGrid action sequence pipeline
+│   ├── scripts/                 # CLI entrypoints (corner-maze-build-yoked, ...)
+│   └── utils/                   # run_io, seeding
+├── notebooks/                   # all ship with Colab bootstrap cells
+├── data/                        # gitignored — lookups + yoked dataset + runs
 └── LICENSE
 ```
 
