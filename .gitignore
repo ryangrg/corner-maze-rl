@@ -44,3 +44,6 @@ htmlcov/
 
 # Local notebook copies for experimentation (e.g. 10a_local.ipynb)
 notebooks/*_local.ipynb
+
+# 10b multi-cohort variant kept local; not ready for share yet.
+notebooks/10b_allgroups.ipynb
