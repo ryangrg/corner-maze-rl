@@ -201,14 +201,15 @@ the comment rot.
 `VOCAB_SIZE` is **derived** (`len(POSE_VOCAB)`) and asserted `== 196` — never hardcoded as a
 configuration value.
 
-`ENCODER_DIM` (embedding width) and `MLP_HIDDEN_UNITS` (optional non-linear hidden layer) are
-independent, and whichever layer is the representation is the one exported — `(196,
-ENCODER_DIM)` with no MLP, `(196, MLP_HIDDEN_UNITS)` with one. Export width is a **free
-parameter**; nothing in this notebook constrains it. 60 is only a starting value.
+`HIDDEN_UNITS` is the single model knob. The architecture is classic skip-gram —
+`one-hot(196) → hidden(HIDDEN_UNITS) → softmax(196)` with no non-linearity — so the hidden layer
+*is* the embedding, and `HIDDEN_UNITS` is the hidden width, the embedding dimension, and the
+export width all at once. The lookup is `(196, HIDDEN_UNITS)`, one row per pose.
 
-The width that matters scientifically is the bottleneck: a narrow embedding forces poses to
-share dimensions, which is what produces overlapping place-field-like tuning rather than 196
-independent codes. That is the knob worth sweeping.
+Keep `HIDDEN_UNITS` **below 196**. Fewer dimensions than poses is the bottleneck that forces
+poses to share dimensions, which is what produces overlapping place-field-like tuning rather
+than 196 independent codes. At ≥196 there is no bottleneck and the model can memorise
+transitions without learning anything spatial. That width is the knob worth sweeping.
 
 ---
 

@@ -36,7 +36,7 @@ comment block (counts regenerated from the parquet, see kickoff). Device selecti
 notebook 10 (`cuda` → `mps` → `cpu`). `REPO_ROOT = Path.cwd().parent`, matching 10 — which is
 also why the Colab bootstrap `chdir`s into `notebooks/`.
 
-Derived, not configured: `VOCAB_SIZE`, `ENCODER_DIM = HIDDEN_UNITS`.
+Derived, not configured: `VOCAB_SIZE`, `EXPORT_DIM = HIDDEN_UNITS`.
 
 ### Section 2 — Pose vocabulary (`cell 5-6`) — **New, this is the foundation**
 Instantiate `CornerMazeEnv(session_type='exposure')`, reset, enumerate walkable cells:
@@ -95,38 +95,33 @@ being whole sessions (~1,900 steps on average) and `WINDOW_RADIUS=2`, clipping c
 per session — roughly 354 of ~444,000 pairs, under 0.1%.
 
 ### Section 5 — Model (`cell 11-12`) — **New**
-Skip-gram with **exactly one hidden layer, always** — never zero, never two:
+Classic skip-gram — one matrix in, one out, one knob:
 
 ```
-one-hot(196) → embed(ENCODER_DIM) → ReLU hidden(HIDDEN_UNITS) → softmax(196)
-               └─ input bottleneck ─┘   └─ the representation ─┘
+one-hot(196) → hidden(HIDDEN_UNITS) → softmax(196)
 ```
 
-Two widths, set independently. In canonical word2vec the hidden layer *is* the embedding — with
-no non-linearity a one-hot times the weight matrix is a row lookup, so the two name the same
-object, and the representation cannot be compressed without shrinking the layer being read.
-Separating them removes that coupling.
+**No non-linearity.** A one-hot times the input matrix is a row selection, so `nn.Embedding`
+*is* the one-hot input layer and the hidden layer *is* the embedding — one and the same object.
+`HIDDEN_UNITS` is therefore the only width: hidden units, embedding dimension, and export width
+all at once. Its rows, `(196, HIDDEN_UNITS)`, are the representation — what the last section
+plots and what gets exported.
 
-**The hidden layer is the representation**, so its per-pose activations are what the last
-section plots and what gets exported: `(196, HIDDEN_UNITS)`, one row per pose. `EXPORT_DIM` /
-`EXPORT_LAYER` are derived and reported.
+**Keep `HIDDEN_UNITS` below 196.** Fewer dimensions than poses is the bottleneck that forces
+poses to share dimensions, which is what yields overlapping place-field-like tuning instead of
+196 independent codes. At ≥196 there is no bottleneck; a printed `[note]` fires to say so.
 
-Export width is a free parameter — nothing in this notebook fixes it. The width that matters
-scientifically is the bottleneck: a narrow `ENCODER_DIM` forces poses to share dimensions,
-which is what yields overlapping place-field-like tuning instead of 196 independent codes.
-
-Note this is deliberately no longer *literally* word2vec, which has no non-linearity. Keeping
-one ReLU hidden layer is the point: it is the layer whose neurons the spatial maps show.
+This is genuine word2vec — no MLP, no `ENCODER_DIM`. An earlier iteration split embedding width
+from a ReLU hidden width; that was collapsed back to the single-matrix form because the
+non-linearity measured slightly *worse* (1.32 vs 1.31) and the second width only caused
+confusion.
 
 `HIDDEN_UNITS` is asserted `int >= 1`. `NEURONS_TO_PLOT` entries outside `0..HIDDEN_UNITS-1`
 are skipped with a warning rather than raising — a narrow layer must not abort the plot cell.
 
-The ReLU layer takes orthogonal init (`gain=√2`), per the repo convention — unlike the
-embedding table, where orthogonal rows would impose structure on the very thing being measured.
-
-A one-hot times a weight matrix is a row selection, so `nn.Embedding` **is** the one-hot input
-layer — state this in the markdown, since the brief specifies one-hot and the equivalence is
-the reason no explicit one-hot tensor is ever materialised. Full softmax over 196 classes via
+Init is the word2vec convention: small uniform on the embedding, zeros on the output. No
+orthogonal init — that is the repo's rule for ReLU nets, and orthogonal rows here would impose
+structure on the very thing being measured. Full softmax over 196 classes via
 `CrossEntropyLoss`; no negative sampling.
 
 Init: small uniform on the input embedding, zeros on the output — the word2vec convention. The
@@ -140,8 +135,8 @@ CPU-viable target: a couple of minutes.
 
 ### Section 7 — Export (`cell 15-16`) — **New**
 ```python
-keys    = np.array(POSE_VOCAB, dtype=np.int32)              # (196, 3)
-vectors = model.input_embed.weight.detach().cpu().numpy()   # (196, H)
+keys    = np.array(POSE_VOCAB, dtype=np.int32)          # (196, 3)
+vectors = model.pose_representations()                  # (196, H) = hidden.weight
 ```
 Assert `keys` matches a freshly enumerated `POSE_VOCAB` element-wise and that
 `vectors.shape == (196, HIDDEN_UNITS)` before writing. Filename `pose2vec_{H}d.npz` pooled,
