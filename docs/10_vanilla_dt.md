@@ -473,14 +473,17 @@ estimate is ~1.5 GB. M3 Max 32GB has ~25 GB available — passes trivially.
 
 ---
 
-## 5. Notebook structure (15 sections)
+## 5. Notebook structure (16 sections: 0–15)
 
 Each section is one markdown cell + one code cell. Cells **auto-execute** by
 default — running cells top-to-bottom kicks off the full pipeline (Cell 10
-is the expensive one, ~90 min on MPS for default config).
+is the expensive one, ~90 min on MPS for default config). **Section 0** is the
+Colab bootstrap (clone repo, editable-install into the kernel, mount Drive, and
+start a background `data/runs/` → Drive sync); it is a no-op when running locally.
 
 | # | Section | Defines | Reads | Writes |
 |---|---|---|---|---|
+| 0 | Colab bootstrap | `IS_COLAB`, `sync_runs_to_drive` (Colab only) | — | — (no-op locally; clones repo, editable-installs, mounts Drive, starts background sync) |
 | 1 | Configuration | All knobs | — | — |
 | 2 | Subject ↔ group validation | `TRAINING_UNITS`, `subject_dir`, `seed_dir` | `subjects.parquet` | `RUN_ROOT/` |
 | 3 | Load yoked + rotate + globals | `ALL_SESSIONS`, `STATE_LOOKUP`, `label_to_row`, `sessions_for`, fills `EXPECTED_OPT_LEN`, `INFERENCE_RTG`, `MAX_EP_LEN`, `WARMUP_STEPS` | yoked parquets, lookup npz | — |
@@ -500,6 +503,8 @@ is the expensive one, ~90 min on MPS for default config).
 ### 5.1 Dependency flow
 
 ```
+Cell 0 (Colab bootstrap — env setup; no-op locally)
+  ↓
 Cell 1 (configs)
   ↓
 Cell 2 (TRAINING_UNITS, RUN_ROOT, seed_dir)
