@@ -373,18 +373,23 @@ class CornerMazeEnv(MiniGridEnv):
         # such that the maze is configured to lead to the next start arm location while including that well location.
         # when the goal is xx it means two wells are present to enter but the rat must go to the far side of the maze to get to the
         # start arm. In all ITI configurations the well is in the empty state.
-        self.layouts['iti_e_x_xx'] = [STATE_ITI, 0,0,0, 0,1,0, 0,1,0, 0,1,0, 1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0, 2,0, 0,0, 0,1, 0,0,0,0]
-        self.layouts['iti_e_x_ne'] = [STATE_ITI, 0,0,1, 0,1,0, 0,1,0, 1,1,0, 1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 3,0,0,0]
-        self.layouts['iti_e_x_se'] = [STATE_ITI, 1,0,0, 0,1,1, 0,1,0, 0,1,0, 1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 3,0,0,0]
-        self.layouts['iti_s_x_xx'] = [STATE_ITI, 0,1,0, 0,0,0, 0,1,0, 0,1,0, 0,1,0,0, 0,0,0,0, 0,0,0,0, 0,1, 0,0, 2,0, 0,0, 0,0,0,0]
-        self.layouts['iti_s_x_se'] = [STATE_ITI, 1,1,0, 0,0,1, 0,1,0, 0,1,0, 0,1,0,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,3,0,0]
-        self.layouts['iti_s_x_sw'] = [STATE_ITI, 0,1,0, 1,0,0, 0,1,1, 0,1,0, 0,1,0,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,3,0,0]
-        self.layouts['iti_w_x_xx'] = [STATE_ITI, 0,1,0, 0,1,0, 0,0,0, 0,1,0, 0,0,1,0, 0,0,0,0, 0,0,0,0, 0,0, 0,1, 0,0, 2,0, 0,0,0,0]
-        self.layouts['iti_w_x_sw'] = [STATE_ITI, 0,1,0, 1,1,0, 0,0,1, 0,1,0, 0,0,1,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,3,0]
-        self.layouts['iti_w_x_nw'] = [STATE_ITI, 0,1,0, 0,1,0, 1,0,0, 0,1,1, 0,0,1,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,3,0]
-        self.layouts['iti_n_x_xx'] = [STATE_ITI, 0,1,0, 0,1,0, 0,1,0, 0,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,0, 2,0, 0,0, 0,1, 0,0, 0,0,0,0]
-        self.layouts['iti_n_x_nw'] = [STATE_ITI, 0,1,0, 0,1,0, 1,1,0, 0,0,1, 0,0,0,1, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,3]
-        self.layouts['iti_n_x_ne'] = [STATE_ITI, 0,1,1, 0,1,0, 0,1,0, 1,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,3]
+        # Both centre doors on the start arm's axis are up during the ITI, as on the
+        # rig (maze-control main_2c2s.py iti_*_vec_LMGT and the ITI trap configs):
+        # the start arm's own centre door and the one opposite it. Until 2026-10-09
+        # only the start arm's was raised here; see corner-maze-analysis
+        # docs/context/constants/doors.json (env_comparison).
+        self.layouts['iti_e_x_xx'] = [STATE_ITI, 0,0,0, 0,1,0, 0,1,0, 0,1,0, 1,0,1,0, 0,0,0,0, 0,0,0,0, 0,0, 2,0, 0,0, 0,1, 0,0,0,0]
+        self.layouts['iti_e_x_ne'] = [STATE_ITI, 0,0,1, 0,1,0, 0,1,0, 1,1,0, 1,0,1,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 3,0,0,0]
+        self.layouts['iti_e_x_se'] = [STATE_ITI, 1,0,0, 0,1,1, 0,1,0, 0,1,0, 1,0,1,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 3,0,0,0]
+        self.layouts['iti_s_x_xx'] = [STATE_ITI, 0,1,0, 0,0,0, 0,1,0, 0,1,0, 0,1,0,1, 0,0,0,0, 0,0,0,0, 0,1, 0,0, 2,0, 0,0, 0,0,0,0]
+        self.layouts['iti_s_x_se'] = [STATE_ITI, 1,1,0, 0,0,1, 0,1,0, 0,1,0, 0,1,0,1, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,3,0,0]
+        self.layouts['iti_s_x_sw'] = [STATE_ITI, 0,1,0, 1,0,0, 0,1,1, 0,1,0, 0,1,0,1, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,3,0,0]
+        self.layouts['iti_w_x_xx'] = [STATE_ITI, 0,1,0, 0,1,0, 0,0,0, 0,1,0, 1,0,1,0, 0,0,0,0, 0,0,0,0, 0,0, 0,1, 0,0, 2,0, 0,0,0,0]
+        self.layouts['iti_w_x_sw'] = [STATE_ITI, 0,1,0, 1,1,0, 0,0,1, 0,1,0, 1,0,1,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,3,0]
+        self.layouts['iti_w_x_nw'] = [STATE_ITI, 0,1,0, 0,1,0, 1,0,0, 0,1,1, 1,0,1,0, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,3,0]
+        self.layouts['iti_n_x_xx'] = [STATE_ITI, 0,1,0, 0,1,0, 0,1,0, 0,0,0, 0,1,0,1, 0,0,0,0, 0,0,0,0, 2,0, 0,0, 0,1, 0,0, 0,0,0,0]
+        self.layouts['iti_n_x_nw'] = [STATE_ITI, 0,1,0, 0,1,0, 1,1,0, 0,0,1, 0,1,0,1, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,3]
+        self.layouts['iti_n_x_ne'] = [STATE_ITI, 0,1,1, 0,1,0, 0,1,0, 1,0,0, 0,1,0,1, 0,0,0,0, 0,0,0,0, 0,0, 0,0, 0,0, 0,0, 0,0,0,3]
 
         # Pretrial configurations: agent confined in start arm before trial begins
         # Naming: pre_{start_arm}_{cue}_xx (xx = no goal wells active)

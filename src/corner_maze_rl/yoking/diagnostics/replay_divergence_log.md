@@ -199,3 +199,28 @@ well position, and current_pos is a corner) guards the S-trigger bridge; the fir
 trick action (LEFT → left-trick cell, FORWARD → forward-trick cell). Counted as `well_exit_bridge_trick`
 (fired once in the whole rebuild). ✓ Resolved: 552/552 synthetic and 422/422 real sessions replay with
 0 divergence; contiguity 552/552; path fidelity: no trials flagged.
+
+---
+
+## 2026-10-09 — Env ITI layouts brought in line with the rig (opposite centre door)
+
+After the zone fix, the only remaining difference between the env's door layouts and the rig's
+(corner-maze-analysis `docs/context/constants/doors.json`, `env_comparison`) was that every env
+ITI layout left the centre door opposite the start arm down, where the rig raises it
+(`iti_*_vec_LMGT` and the ITI trap configs in main_2c2s.py). Decision (user): make the env match
+the rig. All twelve `iti_*` layouts in `corner_maze_env.py` now raise that door; each equals the
+rig's layout under the registry permutation (checked at edit time, and pinned by
+`tests/test_context_constants.py` in corner-maze-mujoco, whose `layouts.py` mirror was changed the
+same way).
+
+Consequences, measured:
+
+- Yoked dataset rebuilt against the changed env: byte-for-byte the same tables as before the change
+  (all 974 per-session files identical in steps, cells, rewards and heuristic counts). The newly
+  raised door closes an arm the rat never entered during the ITI, so no frame remapped differently.
+- Replay of the (unchanged) dataset in the changed env: 552/552 synthetic and 422/422 real sessions
+  with 0 divergence; contiguity 552/552; path fidelity unflagged in both variants.
+- `data/lookups/minigrid_views.npz` regenerated from the new layouts: byte-identical to the
+  previous file. During the ITI the start arm's own centre door occludes the opposite one from
+  every pose the agent can occupy, so no view changes; by the same geometry `pose_visual.npz`
+  (Fusion renders) is not stale.

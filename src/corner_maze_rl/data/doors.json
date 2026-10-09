@@ -1,0 +1,1087 @@
+{
+ "version": "2026-10-09b",
+ "summary": "The 16 automatic doors of the Corner Maze: identity, the rig control vector column, the zone edge each one closes, the 13x13 grid cell and index used by corner-maze-rl, and the MuJoCo body name. Rig order is the ground truth.",
+ "rig_order": "B1..B16 = action-vector columns 3..18; triples (clockwise side door, arm door, counter-clockwise side door) for the East, North, West, South arms, then the centre doors East, North, West, South",
+ "rig_action_vector_columns": {
+  "0": "action type (0 presession, 1 ITI, 2 pretrial, 3 trial start, 4 trial end, 5 exposure reward, 6 exposure barrier)",
+  "1": "trigger zone (0 = no wait)",
+  "2": "pause after the vector, s",
+  "3-18": "doors B1..B16, 1 = raised",
+  "19-22": "cue monitor lit: N, E, S, W",
+  "23-26": "reward pump: NE, SE, SW, NW",
+  "27-30": "lights",
+  "31": "index in the session action-vector list"
+ },
+ "sources": {
+  "vectors": "maze-control/Ubuntu/main_2c2s.py L1807-L1900 (LMGT family used by every 2S2C session type), L820-L860 (ITI close trap configurations), L7030-L7045 (Exposure 2e)",
+  "identities": "arm doors from the ITI next-start-arm test (L820-L827); centre order from the 2e sequence; side doors from the asymmetric ITI close configurations",
+  "verification": "docs/context/check_context.py door_crossings: 80 acquisition sessions, 24,868 zone-edge crossings in pretrial, trial and ITI-close windows; 3 crossed a door the registry says was raised (0.01 %). Controls: side doors swapped 15.2 %, centre swapped 10.9 %, N/S triples swapped 1.9 %."
+ },
+ "doors": [
+  {
+   "id": "B1",
+   "rig_column": 3,
+   "rig_actuator": "A1",
+   "name": "E_junction_S",
+   "arm": "East",
+   "role": "junction_side",
+   "side": "south",
+   "closes_zones": [
+    19,
+    18
+   ],
+   "tracking_xy_approx": [
+    97.5,
+    222.0
+   ],
+   "env_index": 2,
+   "grid_cell": [
+    10,
+    7
+   ],
+   "mujoco_body": "barrier_x10_y7"
+  },
+  {
+   "id": "B2",
+   "rig_column": 4,
+   "rig_actuator": "A2",
+   "name": "E_arm",
+   "arm": "East",
+   "role": "arm",
+   "side": null,
+   "closes_zones": [
+    15,
+    19
+   ],
+   "tracking_xy_approx": [
+    119.5,
+    204.5
+   ],
+   "env_index": 1,
+   "grid_cell": [
+    9,
+    6
+   ],
+   "mujoco_body": "barrier_x9_y6"
+  },
+  {
+   "id": "B3",
+   "rig_column": 5,
+   "rig_actuator": "A3",
+   "name": "E_junction_N",
+   "arm": "East",
+   "role": "junction_side",
+   "side": "north",
+   "closes_zones": [
+    19,
+    20
+   ],
+   "tracking_xy_approx": [
+    139.5,
+    222.0
+   ],
+   "env_index": 0,
+   "grid_cell": [
+    10,
+    5
+   ],
+   "mujoco_body": "barrier_x10_y5"
+  },
+  {
+   "id": "B4",
+   "rig_column": 6,
+   "rig_actuator": "A4",
+   "name": "N_junction_E",
+   "arm": "North",
+   "role": "junction_side",
+   "side": "east",
+   "closes_zones": [
+    13,
+    16
+   ],
+   "tracking_xy_approx": [
+    222.0,
+    139.5
+   ],
+   "env_index": 11,
+   "grid_cell": [
+    7,
+    2
+   ],
+   "mujoco_body": "barrier_x7_y2"
+  },
+  {
+   "id": "B5",
+   "rig_column": 7,
+   "rig_actuator": "A5",
+   "name": "N_arm",
+   "arm": "North",
+   "role": "arm",
+   "side": null,
+   "closes_zones": [
+    12,
+    13
+   ],
+   "tracking_xy_approx": [
+    204.5,
+    118.5
+   ],
+   "env_index": 10,
+   "grid_cell": [
+    6,
+    3
+   ],
+   "mujoco_body": "barrier_x6_y3"
+  },
+  {
+   "id": "B6",
+   "rig_column": 8,
+   "rig_actuator": "A6",
+   "name": "N_junction_W",
+   "arm": "North",
+   "role": "junction_side",
+   "side": "west",
+   "closes_zones": [
+    13,
+    8
+   ],
+   "tracking_xy_approx": [
+    222.0,
+    97.5
+   ],
+   "env_index": 9,
+   "grid_cell": [
+    5,
+    2
+   ],
+   "mujoco_body": "barrier_x5_y2"
+  },
+  {
+   "id": "B7",
+   "rig_column": 9,
+   "rig_actuator": "A7",
+   "name": "W_junction_N",
+   "arm": "West",
+   "role": "junction_side",
+   "side": "north",
+   "closes_zones": [
+    3,
+    4
+   ],
+   "tracking_xy_approx": [
+    138.5,
+    17.5
+   ],
+   "env_index": 8,
+   "grid_cell": [
+    2,
+    5
+   ],
+   "mujoco_body": "barrier_x2_y5"
+  },
+  {
+   "id": "B8",
+   "rig_column": 10,
+   "rig_actuator": "A8",
+   "name": "W_arm",
+   "arm": "West",
+   "role": "arm",
+   "side": null,
+   "closes_zones": [
+    7,
+    3
+   ],
+   "tracking_xy_approx": [
+    118.0,
+    35.5
+   ],
+   "env_index": 7,
+   "grid_cell": [
+    3,
+    6
+   ],
+   "mujoco_body": "barrier_x3_y6"
+  },
+  {
+   "id": "B9",
+   "rig_column": 11,
+   "rig_actuator": "A9",
+   "name": "W_junction_S",
+   "arm": "West",
+   "role": "junction_side",
+   "side": "south",
+   "closes_zones": [
+    3,
+    2
+   ],
+   "tracking_xy_approx": [
+    97.5,
+    17.5
+   ],
+   "env_index": 6,
+   "grid_cell": [
+    2,
+    7
+   ],
+   "mujoco_body": "barrier_x2_y7"
+  },
+  {
+   "id": "B10",
+   "rig_column": 12,
+   "rig_actuator": "A10",
+   "name": "S_junction_W",
+   "arm": "South",
+   "role": "junction_side",
+   "side": "west",
+   "closes_zones": [
+    9,
+    6
+   ],
+   "tracking_xy_approx": [
+    17.0,
+    100.5
+   ],
+   "env_index": 5,
+   "grid_cell": [
+    5,
+    10
+   ],
+   "mujoco_body": "barrier_x5_y10"
+  },
+  {
+   "id": "B11",
+   "rig_column": 13,
+   "rig_actuator": "A11",
+   "name": "S_arm",
+   "arm": "South",
+   "role": "arm",
+   "side": null,
+   "closes_zones": [
+    10,
+    9
+   ],
+   "tracking_xy_approx": [
+    34.5,
+    120.0
+   ],
+   "env_index": 4,
+   "grid_cell": [
+    6,
+    9
+   ],
+   "mujoco_body": "barrier_x6_y9"
+  },
+  {
+   "id": "B12",
+   "rig_column": 14,
+   "rig_actuator": "A12",
+   "name": "S_junction_E",
+   "arm": "South",
+   "role": "junction_side",
+   "side": "east",
+   "closes_zones": [
+    9,
+    14
+   ],
+   "tracking_xy_approx": [
+    17.0,
+    139.5
+   ],
+   "env_index": 3,
+   "grid_cell": [
+    7,
+    10
+   ],
+   "mujoco_body": "barrier_x7_y10"
+  },
+  {
+   "id": "B13",
+   "rig_column": 15,
+   "rig_actuator": "A13",
+   "name": "centre_E",
+   "arm": "East",
+   "role": "centre",
+   "side": null,
+   "closes_zones": [
+    11,
+    15
+   ],
+   "tracking_xy_approx": [
+    119.5,
+    142.5
+   ],
+   "env_index": 12,
+   "grid_cell": [
+    7,
+    6
+   ],
+   "mujoco_body": "barrier_x7_y6"
+  },
+  {
+   "id": "B14",
+   "rig_column": 16,
+   "rig_actuator": "A14",
+   "name": "centre_N",
+   "arm": "North",
+   "role": "centre",
+   "side": null,
+   "closes_zones": [
+    11,
+    12
+   ],
+   "tracking_xy_approx": [
+    143.5,
+    118.5
+   ],
+   "env_index": 15,
+   "grid_cell": [
+    6,
+    5
+   ],
+   "mujoco_body": "barrier_x6_y5"
+  },
+  {
+   "id": "B15",
+   "rig_column": 17,
+   "rig_actuator": "A15",
+   "name": "centre_W",
+   "arm": "West",
+   "role": "centre",
+   "side": null,
+   "closes_zones": [
+    11,
+    7
+   ],
+   "tracking_xy_approx": [
+    117.0,
+    96.5
+   ],
+   "env_index": 14,
+   "grid_cell": [
+    5,
+    6
+   ],
+   "mujoco_body": "barrier_x5_y6"
+  },
+  {
+   "id": "B16",
+   "rig_column": 18,
+   "rig_actuator": "A16",
+   "name": "centre_S",
+   "arm": "South",
+   "role": "centre",
+   "side": null,
+   "closes_zones": [
+    11,
+    10
+   ],
+   "tracking_xy_approx": [
+    95.5,
+    120.0
+   ],
+   "env_index": 13,
+   "grid_cell": [
+    6,
+    7
+   ],
+   "mujoco_body": "barrier_x6_y7"
+  }
+ ],
+ "env_index_to_rig_door": [
+  "B3",
+  "B2",
+  "B1",
+  "B12",
+  "B11",
+  "B10",
+  "B9",
+  "B8",
+  "B7",
+  "B6",
+  "B5",
+  "B4",
+  "B13",
+  "B16",
+  "B15",
+  "B14"
+ ],
+ "env_barrier_locations": [
+  [
+   10,
+   5
+  ],
+  [
+   9,
+   6
+  ],
+  [
+   10,
+   7
+  ],
+  [
+   7,
+   10
+  ],
+  [
+   6,
+   9
+  ],
+  [
+   5,
+   10
+  ],
+  [
+   2,
+   7
+  ],
+  [
+   3,
+   6
+  ],
+  [
+   2,
+   5
+  ],
+  [
+   5,
+   2
+  ],
+  [
+   6,
+   3
+  ],
+  [
+   7,
+   2
+  ],
+  [
+   7,
+   6
+  ],
+  [
+   6,
+   7
+  ],
+  [
+   5,
+   6
+  ],
+  [
+   6,
+   5
+  ]
+ ],
+ "layouts_rig_order": {
+  "presession": {
+   "North": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0
+   ],
+   "East": [
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0
+   ],
+   "South": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1
+   ],
+   "West": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0
+   ]
+  },
+  "pretrial": {
+   "North": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1
+   ],
+   "East": [
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0
+   ],
+   "South": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1
+   ],
+   "West": [
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0
+   ]
+  },
+  "trial": {
+   "North": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1
+   ],
+   "East": [
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0
+   ],
+   "South": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0
+   ],
+   "West": [
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0
+   ]
+  },
+  "trial_end": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "iti_base": {
+   "North": [
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1
+   ],
+   "East": [
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0
+   ],
+   "South": [
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1
+   ],
+   "West": [
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0
+   ]
+  },
+  "iti_close": {
+   "Northwest->North": [
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    1,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1
+   ],
+   "Northwest->West": [
+    0,
+    1,
+    0,
+    1,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0
+   ],
+   "Northeast->East": [
+    1,
+    0,
+    0,
+    0,
+    1,
+    1,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0
+   ],
+   "Northeast->North": [
+    1,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1
+   ],
+   "Southeast->South": [
+    0,
+    1,
+    1,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1
+   ],
+   "Southeast->East": [
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0
+   ],
+   "Southwest->West": [
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    0,
+    1,
+    0
+   ],
+   "Southwest->South": [
+    0,
+    1,
+    0,
+    0,
+    1,
+    0,
+    1,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1
+   ]
+  },
+  "exposure_1e": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "exposure_2e_sequence": [
+   {
+    "step": "presession and first 60 s",
+    "doors": [
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     1,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "step": "east centre door drops, 30 s hold",
+    "doors": [
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "step": "rat in east arm (zone 15): north centre door drops, 30 s hold",
+    "doors": [
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     1,
+     1
+    ]
+   },
+   {
+    "step": "rat in north arm (zone 12): west drops, 30 s hold",
+    "doors": [
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0,
+     1
+    ]
+   },
+   {
+    "step": "rat in west arm (zone 7): south drops, 30 s hold",
+    "doors": [
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   {
+    "step": "rat in south arm (zone 10): all doors drop, rewards begin",
+    "doors": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  ]
+ },
+ "env_comparison": {
+  "date": "2026-10-09",
+  "matches": "all layouts: presession and drop sequence of Exposure 2e (expb_*), every pretrial (pre_*), every trial (trl_*), and every ITI layout (iti_* base and per-corner variants) since corner_maze_env.py raised the centre door opposite the start arm during the ITI as the rig does (2026-10-09; before that every ITI layout lacked that one door)",
+  "differences": "the rig's per-arm presession layouts (one arm closed) have no env counterpart; the env starts sessions in its own way"
+ }
+}

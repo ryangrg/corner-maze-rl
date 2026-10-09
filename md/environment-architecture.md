@@ -58,7 +58,7 @@ Eye images (128×128) loaded from parquet for rendering only.
 | **Exposure** (`expa`/`expb`) | Free exploration, 4 reward wells, cycle-alternation. |
 | **Pretrial** | Dead-end entry, cue presentation. |
 | **Trial** | Goal-directed with cues and barriers. |
-| **ITI** | Inter-trial interval; 3 sub-configs switched via A/B triggers (`_iti_config_idx`). |
+| **ITI** | Inter-trial interval; 3 sub-configs switched via A/B triggers (`_iti_config_idx`). Both centre doors on the start arm's axis are up throughout (the start arm's own and the one opposite), as on the rig; before 2026-10-09 only the start arm's was, see corner-maze-analysis `docs/context/constants/doors.json`. |
 
 ## State types
 
