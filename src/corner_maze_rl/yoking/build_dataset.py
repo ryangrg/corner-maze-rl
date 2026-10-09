@@ -182,6 +182,8 @@ def main():
             'trial_configs': meta.get('trial_configs', '[]'),
             'seed': int(meta.get('seed', 42)),
             'n_trials': int(meta.get('n_trials', 0)),
+            # repair-heuristic counts from build_yoked (JSON; '{}' for older files)
+            'yoke_stats': meta.get('yoke_stats', '{}'),
         })
 
     sessions_df = pd.DataFrame(sessions_rows).sort_values(

@@ -5,11 +5,15 @@ Extracted from the Raspberry Pi motion-tracking camera code
 image; ``return_zone(x, y)`` maps a pixel centroid to one of the 22 maze
 zones. Zone 0 is the fallback for coordinates outside all defined regions.
 
-Zone layout (compass-aligned, north = top of camera frame):
-    Wells:  1=SW, 5=NW, 17=SE, 21=NE
-    Arms:   7=center, 12=N-arm, 10=S-arm, 15=E-arm (via zones 8/16/6/14)
-    Outer:  2/4=W-ring, 8/16=N-ring, 6/14=S-ring, 20/18=E-ring
-    Misc:   3/9/11/13/19=corridor/dead-end, 0=outside
+Zone layout in the 240x240 tracking frame (x: 0 = south .. 239 = north;
+y: 0 = west .. 239 = east; the rig's zone map is the ground truth):
+    Wells:          1=SW, 5=NW, 17=SE, 21=NE
+    Centre:         11
+    Plus-maze arms: 7=W arm, 12=N arm, 10=S arm, 15=E arm (inner zones; the
+                    outer arm zones are the junctions below)
+    T-junctions:    3=W, 13=N, 9=S, 19=E (where each arm meets the ring)
+    Ring segments:  2/4=W side, 8/16=N side, 6/14=S side, 18/20=E side
+    0 = outside every zone (perimeter corners between a well and the ring)
 """
 
 

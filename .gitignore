@@ -47,3 +47,6 @@ notebooks/*_local.ipynb
 
 # 10b multi-cohort variant kept local; not ready for share yet.
 notebooks/10b_allgroups.ipynb
+
+# Local backups of a previous dataset build (kept for comparison, never committed)
+data/yoked/dataset.before_*/

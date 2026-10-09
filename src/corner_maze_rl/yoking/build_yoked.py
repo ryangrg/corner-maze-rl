@@ -31,7 +31,7 @@ from .data_loader import (
     get_trial_well_visits,
 )
 from .map_to_minigrid import map_session_to_grid
-from .map_to_minigrid_actions import build_action_sequence
+from .map_to_minigrid_actions import YOKE_STATS, build_action_sequence
 
 # Repo root = src/corner_maze_rl/yoking/build_yoked.py → up 4
 DEFAULT_OUTPUT_DIR = os.path.join(
@@ -58,6 +58,7 @@ def process_session(
 
     Returns a summary dict with session info and action counts.
     """
+    stats_before = dict(YOKE_STATS)
     t0 = time.time()
 
     # 1. Get coordinates and map to grid
@@ -326,6 +327,10 @@ def process_session(
     if trial_configs:
         meta['n_trials'] = str(len(trial_configs))
         meta['trial_configs'] = json.dumps(trial_configs)
+    # Repair-heuristic counts for this session (deltas of the module counter).
+    yoke_stats = {k: int(YOKE_STATS[k] - stats_before.get(k, 0)) for k in YOKE_STATS}
+    yoke_stats = {k: v for k, v in yoke_stats.items() if v}
+    meta['yoke_stats'] = json.dumps(yoke_stats)
 
     # Write with pyarrow to attach file-level metadata
     table = pa.Table.from_pandas(actions_df, preserve_index=False)
@@ -352,6 +357,7 @@ def process_session(
         'n_trials': len(trial_configs) if trial_configs else 0,
         'path': out_path,
         'elapsed_s': round(elapsed, 1),
+        'yoke_stats': yoke_stats,
     }
 
 
@@ -459,6 +465,13 @@ def main():
     skipped = sum(1 for r in results if r['status'] == 'skipped')
     errors = sum(1 for r in results if r['status'] == 'error')
     print(f'\nDone: {ok} ok, {skipped} skipped, {errors} errors')
+    totals = {}
+    for r in results:
+        for k, v in r.get('yoke_stats', {}).items():
+            totals[k] = totals.get(k, 0) + v
+    if totals:
+        print('Repair heuristics fired (totals over this run): '
+              + ', '.join(f'{k}={v}' for k, v in sorted(totals.items())))
 
 
 if __name__ == '__main__':

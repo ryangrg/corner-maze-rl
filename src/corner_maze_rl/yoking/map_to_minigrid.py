@@ -20,12 +20,21 @@ WELL_ZONES = {
 }
 
 # Intersections: zone -> fixed (grid_x, grid_y)
+#
+# Compass convention (the rig's zone map is the ground truth; see
+# corner-maze-analysis/docs/context/07_pitfalls.md A7/B13): tracking x runs
+# south (0) -> north (239) and tracking y runs west (0) -> east (239); grid_x
+# increases eastward (tracking y) and grid_y increases southward (tracking x
+# inverted). Zone 3 is the WEST T-junction (x 98-138, y 0-35), zone 9 the SOUTH
+# (x 0-34, y 101-139), zone 13 the NORTH (x 205-239), zone 19 the EAST
+# (y 205-239). Until 2026-10-09 zones 3 and 9 were assigned to each other's
+# cells; tests/test_zone_to_grid.py pins the mapping to the zone geometry.
 INTERSECTION_ZONES = {
-    3:  (6, 10),
-    9:  (2, 6),
-    11: (6, 6),
-    13: (6, 2),
-    19: (10, 6),
+    3:  (2, 6),    # W junction
+    9:  (6, 10),   # S junction
+    11: (6, 6),    # centre
+    13: (6, 2),    # N junction
+    19: (10, 6),   # E junction
 }
 
 # Straight segments: zone -> (axis, min_val, max_val, [cell_low, cell_mid, cell_high])

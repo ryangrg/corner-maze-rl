@@ -7,10 +7,16 @@ Direction is inferred from consecutive grid position differences (no BFS).
 Well visits and pretrials use hard-coded forced action blocks.
 """
 import os
-from collections import deque
+from collections import Counter, deque
 
 import numpy as np
 import pandas as pd
+
+# Running counts of the repair heuristics (phantom-jump drops, barrier /
+# reachability remaps, BFS bridges). build_yoked snapshots this per session and
+# writes the deltas into each parquet's metadata, so a rebuild can be compared
+# with the previous one heuristic by heuristic.
+YOKE_STATS: Counter = Counter()
 
 # ── Constants ─────────────────────────────────
 # Actions: 0=left, 1=right, 2=forward, 3=pickup(well entry), 4=pause
@@ -51,7 +57,7 @@ for _i in range(3):
         WALKABLE_CELLS.add((4 * _i + 2, _j + 7))
 
 
-def find_path(start, end, blocked=None):
+def _find_path_impl(start, end, blocked=None):
     """BFS shortest path on the walkable grid. Returns list of positions
     including start and end, or empty list if no path exists.
 
@@ -80,6 +86,21 @@ def find_path(start, end, blocked=None):
 
 
 # ── Grid position consolidation ──────────────
+
+def find_path(start, end, blocked=None):
+    """BFS shortest path (see _find_path_impl); counts every call in YOKE_STATS.
+
+    bfs_calls: calls; bfs_bridged_paths: paths of two or more steps, i.e. the
+    agent is being carried through cells the trace did not visit;
+    bfs_bridge_steps: those steps summed.
+    """
+    path = _find_path_impl(start, end, blocked)
+    YOKE_STATS['bfs_calls'] += 1
+    if path and len(path) > 2:
+        YOKE_STATS['bfs_bridged_paths'] += 1
+        YOKE_STATS['bfs_bridge_steps'] += len(path) - 1
+    return path
+
 def consolidate_grid(grid_x, grid_y, max_gap=2):
     """Deduplicate and merge grid position runs, handling flicker.
 
@@ -153,6 +174,7 @@ def filter_phantom_jumps(runs, jump_threshold=4):
 
         if dist_prev_curr > jump_threshold and dist_prev_nxt <= jump_threshold:
             # Phantom: far jump that snaps back — skip it
+            YOKE_STATS['phantom_runs_dropped'] += 1
             i += 1
             continue
 
@@ -207,6 +229,7 @@ def _remap_blocked_to_neighbor(grid_x, grid_y, blocked, valid=None):
                 best_dist = d
                 best = c
         if best is not None:
+            YOKE_STATS['remap_blocked_frames'] += 1
             grid_x[i] = best[0]
             grid_y[i] = best[1]
 
@@ -284,6 +307,7 @@ def _remap_with_per_frame_barriers(grid_x, grid_y, blocked_per_frame, anchor):
                 best_dist = d
                 best = c
         if best is not None:
+            YOKE_STATS['remap_perframe_frames'] += 1
             grid_x[i] = best[0]
             grid_y[i] = best[1]
             cur_anchor = best
@@ -382,6 +406,7 @@ def _remap_to_reachable_one_pass(grid_x, grid_y, blocked, anchor):
                 best = c
                 best_side_d = d_side
         if best is not None:
+            YOKE_STATS['remap_unreachable_frames'] += 1
             grid_x[i] = best[0]
             grid_y[i] = best[1]
 
@@ -434,6 +459,7 @@ def _remap_unreachable_to_reachable(grid_x, grid_y, blocked, anchor):
                 best_dist = d
                 best = c
         if best is not None:
+            YOKE_STATS['remap_unreachable_legacy_frames'] += 1
             grid_x[i] = best[0]
             grid_y[i] = best[1]
 
@@ -1064,6 +1090,23 @@ _WELL_EXIT_LEFT = {
     (2, 10):  ((2, 9),   3),  # North along west corridor
     (2, 2):   ((3, 2),   0),  # East along north corridor
 }
+
+
+def _env_in_well_exit_state(output, current_pos):
+    """True when the env's agent sits at a corner in the WELL_EXIT masked
+    state: the last non-PAUSE action emitted was the FORWARD that left a well
+    (recorded at the well position). In that state the env collapses LEFT into
+    the left-trick move and FORWARD into the forward-trick move, and PAUSE
+    leaves the state untouched (CornerMazeEnv.step, last_pose handling), so a
+    bridge that starts here must emit the single trick action, not turn+step.
+    """
+    if current_pos not in _WELL_EXIT_LEFT:
+        return False
+    i = len(output) - 1
+    while i >= 0 and output[i][0] == ACT_PAUSE:
+        i -= 1
+    return (i >= 0 and output[i][0] == ACT_FORWARD
+            and (output[i][1], output[i][2]) in WELL_POSITIONS)
 
 
 def _find_registered_visit(trial_well_visits, well_pos, t_start, t_end, tol_ms=200.0):
@@ -1953,7 +1996,29 @@ def generate_acquisition_actions(
                         if not path:
                             path = find_path(current_pos, iti_stop)
                         if path and len(path) >= 2:
-                            for step_i in range(len(path) - 1):
+                            first_hop = 0
+                            if _env_in_well_exit_state(output, current_pos):
+                                # The ITI segment left the agent at the corner
+                                # straight after a well exit (plus pauses). The
+                                # env is in its WELL_EXIT state there, so the
+                                # first hop must be the corner trick: a single
+                                # LEFT or FORWARD that moves, never turn+step
+                                # (which is what diverged CM063 session 4 once
+                                # the W/S junction frames were mapped correctly).
+                                left_dest = _WELL_EXIT_LEFT[current_pos]
+                                fwd_dest = _WELL_EXIT_FORWARD[current_pos]
+                                if path[1] == left_dest[0]:
+                                    output.append((ACT_LEFT, current_pos[0], current_pos[1],
+                                                   current_dir, 0))
+                                    current_pos, current_dir = left_dest
+                                    first_hop = 1
+                                elif path[1] == fwd_dest[0]:
+                                    output.append((ACT_FORWARD, current_pos[0], current_pos[1],
+                                                   current_dir, 0))
+                                    current_pos, current_dir = fwd_dest
+                                    first_hop = 1
+                                YOKE_STATS['well_exit_bridge_trick'] += 1
+                            for step_i in range(first_hop, len(path) - 1):
                                 sdx = path[step_i + 1][0] - path[step_i][0]
                                 sdy = path[step_i + 1][1] - path[step_i][1]
                                 target_dir = DELTA_TO_DIR[(sdx, sdy)]

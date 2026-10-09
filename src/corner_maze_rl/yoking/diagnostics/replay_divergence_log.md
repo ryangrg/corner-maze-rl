@@ -161,3 +161,41 @@ A precise fix needs to track whether ANY action was emitted since the well exit,
 4. **Initial direction from action data** — Set agent direction from first action's direction column for exposure sessions.
 5. **Last trial pickup-only** — Final trial emits only PICKUP (no turnaround/exit) since env terminates on last reward.
 
+
+
+---
+
+## 2026-10-09 — Zone map fix (W/S junctions) and Divergence #7 (CM063 s4)
+
+**Zone map.** `map_to_minigrid.INTERSECTION_ZONES` mapped zone 3 → (6, 10) and zone 9 → (2, 6). The rig's
+zone map (ground truth; `corner-maze-analysis/docs/context/07_pitfalls.md` A7/B13) has zone 3 as the WEST
+junction (x 98–138, y 0–35; trace neighbours 7, 4, 2) and zone 9 as the SOUTH junction (x 0–34, y 101–139;
+neighbours 10, 14, 6). Fixed to 3 → (2, 6), 9 → (6, 10). Over 30 acquisition sessions the raw zone→grid
+trace had 20.8 % non-adjacent cell transitions with the old table and 11.6 % with the fix (the rest are the
+well ↔ zone-0 corner gaps). Full rebuild, baseline (old code, same upstream) vs fixed: junction steps
+S 24,594 → 39,242, W 24,796 → 37,646, N +1,025, E +923 (synthetic); exposure 161,490 → 129,280 steps;
+rewards identical in all 552 sessions. Heuristics over one synthetic+exposure pass, old table → fixed:
+phantom runs dropped 21,443 → 120; BFS bridged paths 31,812 → 1,630; bridge steps 105,879 → 4,358;
+per-frame barrier remaps 1,266,978 → 27,867. `tests/test_zone_to_grid.py` now derives the required
+mapping from the zone boxes and the walkable zone graph.
+
+**Divergence #7 — CM063 s4 (PI+VC_f1, Fixed Cue 1 Twist), step 1178/1397 (synthetic) and 1349/1582 (real).**
+
+*Symptom*: expected pos=(10,10) dir=2, env pos=(9,10) dir=2, trial 16, ITI.
+
+*Context*: the rat made an unrewarded visit to the SE well during the ITI, exited to the corner (10,10)
+facing north, dwelt (PAUSE), then left west along the south corridor. The ITI segment generator ended
+there (its `stop_at_pos` logic), and `generate_acquisition_actions`' bridge to the next start arm emitted
+LEFT (turn in place) + FORWARD. The env, however, was still in its WELL_EXIT masked state at the corner:
+`CornerMazeEnv.step` does not update `last_pose` on PAUSE, and a LEFT at a corner in that state is the
+corner trick (turn and step to (9,10)). So the env was one cell ahead of the stream.
+
+*Why new*: with the junction fix the S-junction frames of this session are mapped correctly, which changed
+where the ITI segment stopped; previously those frames were phantom-filtered and the bridge never started
+from a well-exit corner.
+
+*Fix*: `_env_in_well_exit_state(output, current_pos)` (last non-PAUSE action was the FORWARD recorded at a
+well position, and current_pos is a corner) guards the S-trigger bridge; the first hop is then the single
+trick action (LEFT → left-trick cell, FORWARD → forward-trick cell). Counted as `well_exit_bridge_trick`
+(fired once in the whole rebuild). ✓ Resolved: 552/552 synthetic and 422/422 real sessions replay with
+0 divergence; contiguity 552/552; path fidelity: no trials flagged.
