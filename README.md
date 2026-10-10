@@ -52,7 +52,7 @@ Pass any of these to the runner via `--subject <name>`. Format: `name (subject_i
 
 **VC** (17 subjects, ids 70–100): CM025 (71, 7A+2E), CM026 (73, 5A+2E), CM028**†** (70, 9A+2E), CM031 (75, 9A+2E), CM034**†** (81, 9A+2E), CM035 (76, 8A+2E), CM038 (82, 6A+2E), CM039**†** (83, 5A+2E), CM040 (84, 7A+2E), CM041 (85, 6A+2E), CM042**†** (86, 5A+2E), CM043 (87, 6A+2E), CM044 (88, 5A+2E), CM045 (89, 7A+2E), CM048**†** (92, 6A+2E), CM055 (99, 8A+2E), CM056 (100, 7A+2E)
 
-<sup>Subjects with `1E` rather than `2E` reflect upstream reality (only one Exposure session was recorded), except **CM008\***, where the second Exposure session exists upstream but is missing coordinate tracking — see [Known data gaps](#known-data-gaps) below. Subject IDs are interleaved across groups because they reflect experimental-cohort order, not group membership. Subjects marked **†** are present in the dataset but **out of manuscript scope** — see [Manuscript subject roster](#manuscript-subject-roster) below.</sup>
+<sup>Subjects with `1E` rather than `2E` reflect upstream reality (only one Exposure session was recorded), except **CM008\***, whose 1e Exposure session exists upstream (video) but was never tracked — see [Known data gaps](#known-data-gaps) below. Subject IDs are interleaved across groups because they reflect experimental-cohort order, not group membership. Subjects marked **†** are present in the dataset but **out of manuscript scope** — see [Manuscript subject roster](#manuscript-subject-roster) below.</sup>
 
 ### Manuscript subject roster
 
@@ -155,7 +155,7 @@ corner-maze-rl/
 ## Where to start reading
 
 1. [md/dt-repo-plan.md](md/dt-repo-plan.md) — the full design doc. Sections 1–3 give the goals and layout in five minutes; §4 (reward + RTG), §5 (encoders), §8 (kill switch), and §10 (eval protocol) are the parts that distinguish this from a textbook DT.
-2. [md/maze-behavior-spec.md](md/maze-behavior-spec.md) — task rules: arm structure, trial phases, turn detection, well-visit, reward triggering.
+2. [md/maze-behavior-spec.md](md/maze-behavior-spec.md) — the MiniGrid mapping of the maze (arms, wells, corners, phases, env constants). The task itself, its cohorts and scoring are described in the analysis repository's context package (`corner-maze-analysis/docs/context/`), which wins over anything restated here.
 3. [md/environment-architecture.md](md/environment-architecture.md) — env spec the code is built against.
 4. [md/reward-structure-analysis.md](md/reward-structure-analysis.md) — *why* the reward shaping is what it is.
 5. [md/sr-yoked-negative-results.md](md/sr-yoked-negative-results.md) — a documented negative result (SR fails on yoked data); the plan's §10.3 frames how to report findings like this scientifically.
