@@ -164,7 +164,7 @@ labels, 2568 (orig, rotated) pairs map to the same embedding row.
 
 ### 2.5 ⚠ Direction-rotation sign error in legacy code
 
-The legacy implementation at `~/Code/python-dev/corner-maze-rl-legacy/yoking/rotate_to_canonical.py:62` uses
+The legacy implementation at `~/Code/corner-maze/corner-maze-rl-legacy/yoking/rotate_to_canonical.py:62` uses
 `(d + n_rotations) % 4`. **This is wrong** for `n ∈ {1, 3}` and only accidentally
 correct for `n = 2` (180° symmetric). The notebook uses the corrected
 `(d − n_rotations) % 4`.
@@ -1345,7 +1345,7 @@ ported. Differences:
 
 ### 12.3 The corner-maze-rl-legacy repo
 
-`~/Code/python-dev/corner-maze-rl-legacy/` is the predecessor codebase with
+`~/Code/corner-maze/corner-maze-rl-legacy/` is the predecessor codebase with
 the original rotation pipeline (`yoking/rotate_to_canonical.py`, with the
 known direction bug). Use it as a reference for the rotation math + the
 analysis-side parquet schemas, but **port the corrected `(d − n) % 4`

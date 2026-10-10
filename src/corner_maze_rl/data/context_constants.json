@@ -1,8 +1,8 @@
 {
  "doors.json": {
-  "sha256": "14f5b461a16c3a2e6fb78b3449c53b49a7527c94f6d5085708860d4471e4b055",
+  "sha256": "3ed0bcd9444bfca84374b7b841e21477b2167f32e3b9a5d17da9472c72676fd3",
   "source": "corner-maze-analysis/docs/context/constants/doors.json",
-  "version": "2026-10-09b",
+  "version": "2026-10-09c",
   "rule": "vendored copy; update deliberately from the source and refresh this hash, never edit in place"
  },
  "zones.json": {

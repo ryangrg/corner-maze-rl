@@ -13,7 +13,7 @@ Mirrors the agent-side metrics computed in [notebook 03A](../../notebooks/03A_pp
 python scripts/extract_rat_benchmarks.py
 ```
 
-Requires `corner-maze-analysis` repo at `~/Code/python-dev/corner-maze-analysis/` (path hard-coded in the script). Re-runs are cheap (~1s).
+Requires `corner-maze-analysis` repo at `~/Code/corner-maze/corner-maze-analysis/` (path hard-coded in the script). Re-runs are cheap (~1s).
 
 ## Schema — `per_subject.parquet` (48 rows)
 

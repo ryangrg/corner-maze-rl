@@ -65,7 +65,7 @@ import numpy as np
 import pandas as pd
 
 # ── Source / destination paths ────────────────────────────────
-ANALYSIS_DATA = Path('/Users/ryangrgurich/Code/python-dev/corner-maze-analysis/data/processed')
+ANALYSIS_DATA = Path('/Users/ryangrgurich/Code/corner-maze/corner-maze-analysis/data/processed')
 RL_REPO       = Path(__file__).resolve().parents[1]
 YOKED_DATA    = RL_REPO / 'data' / 'yoked' / 'dataset'
 OUT_DIR       = RL_REPO / 'data' / 'rat_benchmarks'

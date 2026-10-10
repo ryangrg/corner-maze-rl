@@ -1,5 +1,5 @@
 {
- "version": "2026-10-09b",
+ "version": "2026-10-09c",
  "summary": "The 16 automatic doors of the Corner Maze: identity, the rig control vector column, the zone edge each one closes, the 13x13 grid cell and index used by corner-maze-rl, and the MuJoCo body name. Rig order is the ground truth.",
  "rig_order": "B1..B16 = action-vector columns 3..18; triples (clockwise side door, arm door, counter-clockwise side door) for the East, North, West, South arms, then the centre doors East, North, West, South",
  "rig_action_vector_columns": {
@@ -1077,7 +1077,53 @@
      0
     ]
    }
-  ]
+  ],
+  "iti_far": {
+   "comment": "'Far' ITI cases: the next start arm is not adjacent to the reward corner. The rig emits iti_base[arm] at trial end, then watches two ring zones; on the rat's first 0.1 s in either, it raises two more doors (one behind the rat, one ahead at the start arm's junction) so the rat is funnelled into the start arm, and stops watching. Rule depends only on the next start arm. main_2c2s.py L879-L1000.",
+   "by_next_start_arm": {
+    "South": {
+     "2": [
+      "B7",
+      "B12"
+     ],
+     "18": [
+      "B3",
+      "B10"
+     ]
+    },
+    "East": {
+     "14": [
+      "B10",
+      "B3"
+     ],
+     "16": [
+      "B6",
+      "B1"
+     ]
+    },
+    "West": {
+     "6": [
+      "B12",
+      "B7"
+     ],
+     "8": [
+      "B4",
+      "B9"
+     ]
+    },
+    "North": {
+     "4": [
+      "B9",
+      "B4"
+     ],
+     "20": [
+      "B1",
+      "B6"
+     ]
+    }
+   },
+   "close_cases": "when the next start arm IS adjacent to the reward corner the rig instead emits one of the iti_close configurations at trial end (keys 'Corner->Arm' above)"
+  }
  },
  "env_comparison": {
   "date": "2026-10-09",
