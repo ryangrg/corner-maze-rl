@@ -1,7 +1,7 @@
 """The vendored task-context constants (doors.json, zones.json) and the env.
 
 The files under src/corner_maze_rl/data/ are copies of
-corner-maze-analysis/docs/context/constants/. context_constants.json records
+corner-maze/docs/context/constants/. context_constants.json records
 their SHA-256 so a copy cannot drift silently: changing a file without
 refreshing the manifest fails here. The rig's door order is the ground truth;
 the env's BARRIER_LOCATIONS and the yoking's zone-to-grid table must agree with

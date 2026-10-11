@@ -3,8 +3,7 @@
 This file holds only what is specific to the MiniGrid environment in this repository: how the
 real maze's arms, wells and corners map onto the 13 × 13 grid, how the environment runs the
 phases of a trial, its reward constants, and the modelling implications. The task itself
-(apparatus, protocol, cohorts, scoring, results) is described once, in the analysis
-repository's context package (`corner-maze-analysis/docs/context/`, private; start at its
+(apparatus, protocol, cohorts, scoring, results) is described once, in the workspace repository's context package (`corner-maze/docs/context/`, private; start at its
 `00_START_HERE.md`). Its door and zone registry is vendored here under
 `src/corner_maze_rl/data/` with a hash manifest. Where an older copy of this file or any note in
 this repository restates a task fact, the package wins. (Trimmed 2026-10-10; the previous
